@@ -725,9 +725,47 @@ function showPlaceholder(svg, text) {
         .text(text);
 }
 
-// Initialize when the document is ready
+// Initialize the modal functionality
+function initModal() {
+    const infoButton = document.getElementById('info-button');
+    const infoModal = document.getElementById('info-modal');
+    const closeModal = document.querySelector('.close-modal');
+    
+    // Open modal when info button is clicked
+    if (infoButton) {
+        infoButton.addEventListener('click', function() {
+            infoModal.style.display = 'block';
+        });
+    }
+    
+    // Close modal when X is clicked
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            infoModal.style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === infoModal) {
+            infoModal.style.display = 'none';
+        }
+    });
+    
+    // Close modal when ESC key is pressed
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && infoModal.style.display === 'block') {
+            infoModal.style.display = 'none';
+        }
+    });
+}
+
+// Add the modal initialization to the DOMContentLoaded event
 document.addEventListener("DOMContentLoaded", function() {
     console.log("Narrative.js: DOM content loaded");
+    
+    // Initialize the modal functionality
+    initModal();
     
     // Check if we need to wait for data loading
     if (typeof loadData === "function") {

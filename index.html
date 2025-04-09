@@ -32,7 +32,22 @@
         <!-- Header -->
         <header class="site-header">
             <h2 class="header-text"><a href="https://sliceddata.substack.com/" target="_blank">Subscribe to <span>Sliced Data</span></a></h2>
+            <button id="info-button" class="info-button" aria-label="Information about this project">i</button>
         </header>
+
+        <!-- Info Modal -->
+        <div id="info-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>About Tennis Scorigami</h2>
+                <p>"Scorigami" refers to a final score that has never happened before in the history of a sport. The concept was popularized by Jon Bois for NFL scores.</p>
+                <p>This Tennis Scorigami project visualizes all possible scorelines in best-of-three tennis matches and shows which ones have occurred in professional tennis since the beginning of the Open Era in 1968.</p>
+                <h3>Data Source</h3>
+                <p>Tennis match data provided by <a href="http://tennisabstract.com/" target="_blank">Jeff Sackmann at TennisAbstract.com</a>.</p>
+                <h3>Methodology</h3>
+                <p>This visualization focuses specifically on best-of-three matches. It includes ATP (men's) and WTA (women's) tour match results from main draws. Scores are displayed in a grid format, with each circle representing a unique possible final score.</p>
+            </div>
+        </div>
 
         <!-- Main content -->
         <main class="main-content">

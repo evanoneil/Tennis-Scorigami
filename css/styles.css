@@ -433,7 +433,13 @@ svg .legend {
     padding: 10px;
     text-align: center;
     margin-top: 10px;
-    display: none; /* Hide the legend container */
+    font-family: "GT Planar Regular", sans-serif;
+    display: block; /* Make the legend container visible */
+}
+
+/* Hide the legend only on the explorer page */
+#explorer #legend-container {
+    display: none;
 }
 
 /* Update legend item color circle */
@@ -1272,7 +1278,13 @@ svg {
     padding: 10px;
     text-align: center;
     margin-top: 10px;
-    display: none; /* Hide the legend container */
+    font-family: "GT Planar Regular", sans-serif;
+    display: block; /* Make the legend container visible */
+}
+
+/* Hide the legend only on the explorer page */
+#explorer #legend-container {
+    display: none;
 }
 
 /* NEW STYLES FOR TENNIS SCORIGAMI REDESIGN */
@@ -1301,6 +1313,10 @@ svg {
     background-color: #325BB5; /* Update to requested blue */
     padding: 8px 0;
     text-align: center;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .header-text {
@@ -1859,4 +1875,113 @@ svg {
 
 .rare-scorelines li:nth-child(odd) {
     background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Site Header with flexbox to position the info button */
+.site-header {
+    background-color: #325BB5; /* Update to requested blue */
+    padding: 8px 0;
+    text-align: center;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Info Button Styles */
+.info-button {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 2px solid white;
+    color: white;
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.info-button:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: #f9f2e2;
+    margin: 15% auto;
+    padding: 30px;
+    border: 1px solid #7EDC44;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.modal-content h2 {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    color: #2D4D2E;
+    font-size: 30px;
+    margin-bottom: 20px;
+}
+
+.modal-content h3 {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    color: #2D4D2E;
+    font-size: 22px;
+    margin: 20px 0 10px 0;
+}
+
+.modal-content p {
+    font-family: "GT Planar Regular", sans-serif;
+    color: #333;
+    margin-bottom: 15px;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+.modal-content a {
+    color: #325BB5;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.modal-content a:hover {
+    text-decoration: underline;
+}
+
+.close-modal {
+    color: #2D4D2E;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-modal:hover {
+    color: #325BB5;
 } 
