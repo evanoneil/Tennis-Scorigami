@@ -1,0 +1,7804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Tennis Scorigami</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        
+        #chart-container {
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .scoreline-box {
+            stroke: white;
+            stroke-width: 1px;
+            transition: transform 0.1s ease;
+        }
+        
+        .scoreline-box:hover {
+            transform: scale(1.1);
+            stroke: #333;
+            stroke-width: 2px;
+            z-index: 1000;
+        }
+        
+        .score-text {
+            text-anchor: middle;
+            dominant-baseline: middle;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        
+        .row-label {
+            text-anchor: end;
+            dominant-baseline: middle;
+            font-weight: bold;
+        }
+        
+        .title-text {
+            text-anchor: middle;
+            font-weight: bold;
+        }
+        
+        .subtitle-text {
+            text-anchor: middle;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            pointer-events: none;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 200px;
+        }
+        
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        #controls {
+            margin: 20px auto;
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            background-color: #4D9F64;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #3c7d4f;
+        }
+        
+        .filter-buttons {
+            margin: 10px 0;
+        }
+        
+        .filter-buttons button {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .filter-buttons button.active {
+            background-color: #13472A;
+            color: white;
+        }
+        
+        .export-buttons {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h2>Tennis Scorigami - 2024 ATP Tour</h2>
+        <div class="filter-buttons">
+            <button id="all-button" class="active">All Scores</button>
+            <button id="observed-button">Observed Scores</button>
+            <button id="not-observed-button">Not Observed</button>
+        </div>
+        <div>
+            <button id="straight-sets-button">Straight Sets Only</button>
+            <button id="three-sets-button">Three Sets Only</button>
+            <button id="reset-button">Reset View</button>
+        </div>
+        <div class="export-buttons">
+            <button id="export-svg">Export as SVG</button>
+        </div>
+    </div>
+    
+    <div id="chart-container"></div>
+    <div id="legend"></div>
+
+    <script>
+        // Load the data
+        const jsonData = {
+  "statistics": {
+    "total_possible": 735,
+    "total_observed": 373,
+    "fill_percentage": 50.7
+  },
+  "color_scale": {
+    "not_observed": "#f0f0f0",
+    "rare": "#FBFAA7",
+    "uncommon": "#A2F359",
+    "common": "#4D9F64",
+    "very_common": "#13472A"
+  },
+  "frequency_breaks": {
+    "rare": "1-5",
+    "uncommon": "6-25",
+    "common": "26-75",
+    "very_common": "76+"
+  },
+  "first_sets": ["7-6", "7-5", "6-4", "6-3", "6-2", "6-1", "6-0", "6-7", "5-7", "4-6", "3-6", "2-6", "1-6", "0-6"],
+  "scorelines": {
+    "7-6": [
+      {
+        "scoreline": "7-6 0-6 6-0",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "7-6 0-6 6-1",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "7-6 0-6 6-2",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "7-6 0-6 6-3",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "7-6 0-6 6-4",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "7-6 0-6 7-5",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "7-6 0-6 7-6",
+        "set1": "7-6",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "7-6 1-6 6-0",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "7-6 1-6 6-1",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 9
+      },
+      {
+        "scoreline": "7-6 1-6 6-2",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "7-6 1-6 6-3",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 11
+      },
+      {
+        "scoreline": "7-6 1-6 6-4",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "7-6 1-6 7-5",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "7-6 1-6 7-6",
+        "set1": "7-6",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "7-6 2-6 6-0",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "7-6 2-6 6-1",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 16
+      },
+      {
+        "scoreline": "7-6 2-6 6-2",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "7-6 2-6 6-3",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "7-6 2-6 6-4",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 19
+      },
+      {
+        "scoreline": "7-6 2-6 7-5",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 20
+      },
+      {
+        "scoreline": "7-6 2-6 7-6",
+        "set1": "7-6",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "7-6 3-6 6-0",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "7-6 3-6 6-1",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "7-6 3-6 6-2",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 24
+      },
+      {
+        "scoreline": "7-6 3-6 6-3",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "7-6 3-6 6-4",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "7-6 3-6 7-5",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "7-6 3-6 7-6",
+        "set1": "7-6",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "7-6 4-6 6-0",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "7-6 4-6 6-1",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "7-6 4-6 6-2",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "7-6 4-6 6-3",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 11,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 32
+      },
+      {
+        "scoreline": "7-6 4-6 6-4",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "7-6 4-6 7-5",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "7-6 4-6 7-6",
+        "set1": "7-6",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "7-6 5-7 6-0",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "7-6 5-7 6-1",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "7-6 5-7 6-2",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "7-6 5-7 6-3",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "7-6 5-7 6-4",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "7-6 5-7 7-5",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 41
+      },
+      {
+        "scoreline": "7-6 5-7 7-6",
+        "set1": "7-6",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "7-6 6-0",
+        "set1": "7-6",
+        "set2": "6-0",
+        "set3": "",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 43
+      },
+      {
+        "scoreline": "7-6 6-1",
+        "set1": "7-6",
+        "set2": "6-1",
+        "set3": "",
+        "count": 22,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 44
+      },
+      {
+        "scoreline": "7-6 6-2",
+        "set1": "7-6",
+        "set2": "6-2",
+        "set3": "",
+        "count": 48,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 45
+      },
+      {
+        "scoreline": "7-6 6-3",
+        "set1": "7-6",
+        "set2": "6-3",
+        "set3": "",
+        "count": 69,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 46
+      },
+      {
+        "scoreline": "7-6 6-4",
+        "set1": "7-6",
+        "set2": "6-4",
+        "set3": "",
+        "count": 79,
+        "color": "#13472A",
+        "color_bin": "very_common",
+        "position": 47
+      },
+      {
+        "scoreline": "7-6 6-7 6-0",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "7-6 6-7 6-1",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      },
+      {
+        "scoreline": "7-6 6-7 6-2",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "7-6 6-7 6-3",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 51
+      },
+      {
+        "scoreline": "7-6 6-7 6-4",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 52
+      },
+      {
+        "scoreline": "7-6 6-7 7-5",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 53
+      },
+      {
+        "scoreline": "7-6 6-7 7-6",
+        "set1": "7-6",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 54
+      },
+      {
+        "scoreline": "7-6 7-5",
+        "set1": "7-6",
+        "set2": "7-5",
+        "set3": "",
+        "count": 22,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 55
+      },
+      {
+        "scoreline": "7-6 7-6",
+        "set1": "7-6",
+        "set2": "7-6",
+        "set3": "",
+        "count": 64,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 56
+      }
+    ],
+    "7-5": [
+      {
+        "scoreline": "7-5 0-6 6-0",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "7-5 0-6 6-1",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "7-5 0-6 6-2",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "7-5 0-6 6-3",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "7-5 0-6 6-4",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "7-5 0-6 7-5",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "7-5 0-6 7-6",
+        "set1": "7-5",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "7-5 1-6 6-0",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "7-5 1-6 6-1",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "7-5 1-6 6-2",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "7-5 1-6 6-3",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "7-5 1-6 6-4",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 12
+      },
+      {
+        "scoreline": "7-5 1-6 7-5",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "7-5 1-6 7-6",
+        "set1": "7-5",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "7-5 2-6 6-0",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "7-5 2-6 6-1",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "7-5 2-6 6-2",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "7-5 2-6 6-3",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 18
+      },
+      {
+        "scoreline": "7-5 2-6 6-4",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "7-5 2-6 7-5",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "7-5 2-6 7-6",
+        "set1": "7-5",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "7-5 3-6 6-0",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "7-5 3-6 6-1",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 23
+      },
+      {
+        "scoreline": "7-5 3-6 6-2",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 24
+      },
+      {
+        "scoreline": "7-5 3-6 6-3",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "7-5 3-6 6-4",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 26
+      },
+      {
+        "scoreline": "7-5 3-6 7-5",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 27
+      },
+      {
+        "scoreline": "7-5 3-6 7-6",
+        "set1": "7-5",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "7-5 4-6 6-0",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "7-5 4-6 6-1",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "7-5 4-6 6-2",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 31
+      },
+      {
+        "scoreline": "7-5 4-6 6-3",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "7-5 4-6 6-4",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 33
+      },
+      {
+        "scoreline": "7-5 4-6 7-5",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "7-5 4-6 7-6",
+        "set1": "7-5",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "7-5 5-7 6-0",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "7-5 5-7 6-1",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "7-5 5-7 6-2",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "7-5 5-7 6-3",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "7-5 5-7 6-4",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 40
+      },
+      {
+        "scoreline": "7-5 5-7 7-5",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "7-5 5-7 7-6",
+        "set1": "7-5",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "7-5 6-0",
+        "set1": "7-5",
+        "set2": "6-0",
+        "set3": "",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 43
+      },
+      {
+        "scoreline": "7-5 6-1",
+        "set1": "7-5",
+        "set2": "6-1",
+        "set3": "",
+        "count": 21,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 44
+      },
+      {
+        "scoreline": "7-5 6-2",
+        "set1": "7-5",
+        "set2": "6-2",
+        "set3": "",
+        "count": 22,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 45
+      },
+      {
+        "scoreline": "7-5 6-3",
+        "set1": "7-5",
+        "set2": "6-3",
+        "set3": "",
+        "count": 36,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 46
+      },
+      {
+        "scoreline": "7-5 6-4",
+        "set1": "7-5",
+        "set2": "6-4",
+        "set3": "",
+        "count": 35,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 47
+      },
+      {
+        "scoreline": "7-5 6-7 6-0",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "7-5 6-7 6-1",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 49
+      },
+      {
+        "scoreline": "7-5 6-7 6-2",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "7-5 6-7 6-3",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 51
+      },
+      {
+        "scoreline": "7-5 6-7 6-4",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 52
+      },
+      {
+        "scoreline": "7-5 6-7 7-5",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 53
+      },
+      {
+        "scoreline": "7-5 6-7 7-6",
+        "set1": "7-5",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 54
+      },
+      {
+        "scoreline": "7-5 7-5",
+        "set1": "7-5",
+        "set2": "7-5",
+        "set3": "",
+        "count": 13,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 55
+      },
+      {
+        "scoreline": "7-5 7-6",
+        "set1": "7-5",
+        "set2": "7-6",
+        "set3": "",
+        "count": 26,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 56
+      }
+    ],
+    "6-4": [
+      {
+        "scoreline": "6-4 0-6 6-0",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "6-4 0-6 6-1",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 2
+      },
+      {
+        "scoreline": "6-4 0-6 6-2",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "6-4 0-6 6-3",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "6-4 0-6 6-4",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "6-4 0-6 7-5",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 6
+      },
+      {
+        "scoreline": "6-4 0-6 7-6",
+        "set1": "6-4",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "6-4 1-6 6-0",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "6-4 1-6 6-1",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 9
+      },
+      {
+        "scoreline": "6-4 1-6 6-2",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 10
+      },
+      {
+        "scoreline": "6-4 1-6 6-3",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "6-4 1-6 6-4",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "6-4 1-6 7-5",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "6-4 1-6 7-6",
+        "set1": "6-4",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 14
+      },
+      {
+        "scoreline": "6-4 2-6 6-0",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "6-4 2-6 6-1",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 16
+      },
+      {
+        "scoreline": "6-4 2-6 6-2",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "6-4 2-6 6-3",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "6-4 2-6 6-4",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 19
+      },
+      {
+        "scoreline": "6-4 2-6 7-5",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 20
+      },
+      {
+        "scoreline": "6-4 2-6 7-6",
+        "set1": "6-4",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "6-4 3-6 6-0",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "6-4 3-6 6-1",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "6-4 3-6 6-2",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "6-4 3-6 6-3",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 14,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 25
+      },
+      {
+        "scoreline": "6-4 3-6 6-4",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "6-4 3-6 7-5",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "6-4 3-6 7-6",
+        "set1": "6-4",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "6-4 4-6 6-0",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 29
+      },
+      {
+        "scoreline": "6-4 4-6 6-1",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "6-4 4-6 6-2",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "6-4 4-6 6-3",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "6-4 4-6 6-4",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 10,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 33
+      },
+      {
+        "scoreline": "6-4 4-6 7-5",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "6-4 4-6 7-6",
+        "set1": "6-4",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 35
+      },
+      {
+        "scoreline": "6-4 5-7 6-0",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "6-4 5-7 6-1",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 37
+      },
+      {
+        "scoreline": "6-4 5-7 6-2",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "6-4 5-7 6-3",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "6-4 5-7 6-4",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "6-4 5-7 7-5",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "6-4 5-7 7-6",
+        "set1": "6-4",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "6-4 6-0",
+        "set1": "6-4",
+        "set2": "6-0",
+        "set3": "",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 43
+      },
+      {
+        "scoreline": "6-4 6-1",
+        "set1": "6-4",
+        "set2": "6-1",
+        "set3": "",
+        "count": 30,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 44
+      },
+      {
+        "scoreline": "6-4 6-2",
+        "set1": "6-4",
+        "set2": "6-2",
+        "set3": "",
+        "count": 65,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 45
+      },
+      {
+        "scoreline": "6-4 6-3",
+        "set1": "6-4",
+        "set2": "6-3",
+        "set3": "",
+        "count": 63,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 46
+      },
+      {
+        "scoreline": "6-4 6-4",
+        "set1": "6-4",
+        "set2": "6-4",
+        "set3": "",
+        "count": 123,
+        "color": "#13472A",
+        "color_bin": "very_common",
+        "position": 47
+      },
+      {
+        "scoreline": "6-4 6-7 6-0",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "6-4 6-7 6-1",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      },
+      {
+        "scoreline": "6-4 6-7 6-2",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "6-4 6-7 6-3",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 11,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 51
+      },
+      {
+        "scoreline": "6-4 6-7 6-4",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 52
+      },
+      {
+        "scoreline": "6-4 6-7 7-5",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 53
+      },
+      {
+        "scoreline": "6-4 6-7 7-6",
+        "set1": "6-4",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 54
+      },
+      {
+        "scoreline": "6-4 7-5",
+        "set1": "6-4",
+        "set2": "7-5",
+        "set3": "",
+        "count": 48,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 55
+      },
+      {
+        "scoreline": "6-4 7-6",
+        "set1": "6-4",
+        "set2": "7-6",
+        "set3": "",
+        "count": 62,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 56
+      }
+    ],
+    "6-3": [
+      {
+        "scoreline": "6-3 0-6 6-0",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "6-3 0-6 6-1",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "6-3 0-6 6-2",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "6-3 0-6 6-3",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "6-3 0-6 6-4",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "6-3 0-6 7-5",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "6-3 0-6 7-6",
+        "set1": "6-3",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "6-3 1-6 6-0",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 8
+      },
+      {
+        "scoreline": "6-3 1-6 6-1",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "6-3 1-6 6-2",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 10
+      },
+      {
+        "scoreline": "6-3 1-6 6-3",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "6-3 1-6 6-4",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 12
+      },
+      {
+        "scoreline": "6-3 1-6 7-5",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 13
+      },
+      {
+        "scoreline": "6-3 1-6 7-6",
+        "set1": "6-3",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 14
+      },
+      {
+        "scoreline": "6-3 2-6 6-0",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "6-3 2-6 6-1",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "6-3 2-6 6-2",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "6-3 2-6 6-3",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "6-3 2-6 6-4",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 19
+      },
+      {
+        "scoreline": "6-3 2-6 7-5",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 20
+      },
+      {
+        "scoreline": "6-3 2-6 7-6",
+        "set1": "6-3",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "6-3 3-6 6-0",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "6-3 3-6 6-1",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 23
+      },
+      {
+        "scoreline": "6-3 3-6 6-2",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "6-3 3-6 6-3",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 9,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 25
+      },
+      {
+        "scoreline": "6-3 3-6 6-4",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "6-3 3-6 7-5",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 27
+      },
+      {
+        "scoreline": "6-3 3-6 7-6",
+        "set1": "6-3",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 28
+      },
+      {
+        "scoreline": "6-3 4-6 6-0",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "6-3 4-6 6-1",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "6-3 4-6 6-2",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "6-3 4-6 6-3",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "6-3 4-6 6-4",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 33
+      },
+      {
+        "scoreline": "6-3 4-6 7-5",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 34
+      },
+      {
+        "scoreline": "6-3 4-6 7-6",
+        "set1": "6-3",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "6-3 5-7 6-0",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "6-3 5-7 6-1",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "6-3 5-7 6-2",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "6-3 5-7 6-3",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "6-3 5-7 6-4",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "6-3 5-7 7-5",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "6-3 5-7 7-6",
+        "set1": "6-3",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "6-3 6-0",
+        "set1": "6-3",
+        "set2": "6-0",
+        "set3": "",
+        "count": 13,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 43
+      },
+      {
+        "scoreline": "6-3 6-1",
+        "set1": "6-3",
+        "set2": "6-1",
+        "set3": "",
+        "count": 29,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 44
+      },
+      {
+        "scoreline": "6-3 6-2",
+        "set1": "6-3",
+        "set2": "6-2",
+        "set3": "",
+        "count": 66,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 45
+      },
+      {
+        "scoreline": "6-3 6-3",
+        "set1": "6-3",
+        "set2": "6-3",
+        "set3": "",
+        "count": 49,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 46
+      },
+      {
+        "scoreline": "6-3 6-4",
+        "set1": "6-3",
+        "set2": "6-4",
+        "set3": "",
+        "count": 102,
+        "color": "#13472A",
+        "color_bin": "very_common",
+        "position": 47
+      },
+      {
+        "scoreline": "6-3 6-7 6-0",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 48
+      },
+      {
+        "scoreline": "6-3 6-7 6-1",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      },
+      {
+        "scoreline": "6-3 6-7 6-2",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "6-3 6-7 6-3",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 51
+      },
+      {
+        "scoreline": "6-3 6-7 6-4",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 52
+      },
+      {
+        "scoreline": "6-3 6-7 7-5",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 53
+      },
+      {
+        "scoreline": "6-3 6-7 7-6",
+        "set1": "6-3",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 54
+      },
+      {
+        "scoreline": "6-3 7-5",
+        "set1": "6-3",
+        "set2": "7-5",
+        "set3": "",
+        "count": 26,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 55
+      },
+      {
+        "scoreline": "6-3 7-6",
+        "set1": "6-3",
+        "set2": "7-6",
+        "set3": "",
+        "count": 59,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 56
+      }
+    ],
+    "6-2": [
+      {
+        "scoreline": "6-2 0-6 6-0",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "6-2 0-6 6-1",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "6-2 0-6 6-2",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "6-2 0-6 6-3",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "6-2 0-6 6-4",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "6-2 0-6 7-5",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "6-2 0-6 7-6",
+        "set1": "6-2",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "6-2 1-6 6-0",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "6-2 1-6 6-1",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 9
+      },
+      {
+        "scoreline": "6-2 1-6 6-2",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "6-2 1-6 6-3",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "6-2 1-6 6-4",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "6-2 1-6 7-5",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "6-2 1-6 7-6",
+        "set1": "6-2",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "6-2 2-6 6-0",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "6-2 2-6 6-1",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "6-2 2-6 6-2",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "6-2 2-6 6-3",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "6-2 2-6 6-4",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "6-2 2-6 7-5",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 20
+      },
+      {
+        "scoreline": "6-2 2-6 7-6",
+        "set1": "6-2",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 21
+      },
+      {
+        "scoreline": "6-2 3-6 6-0",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 22
+      },
+      {
+        "scoreline": "6-2 3-6 6-1",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "6-2 3-6 6-2",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "6-2 3-6 6-3",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "6-2 3-6 6-4",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "6-2 3-6 7-5",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 27
+      },
+      {
+        "scoreline": "6-2 3-6 7-6",
+        "set1": "6-2",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "6-2 4-6 6-0",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "6-2 4-6 6-1",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "6-2 4-6 6-2",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "6-2 4-6 6-3",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "6-2 4-6 6-4",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "6-2 4-6 7-5",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "6-2 4-6 7-6",
+        "set1": "6-2",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "6-2 5-7 6-0",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "6-2 5-7 6-1",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "6-2 5-7 6-2",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "6-2 5-7 6-3",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "6-2 5-7 6-4",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "6-2 5-7 7-5",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "6-2 5-7 7-6",
+        "set1": "6-2",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 42
+      },
+      {
+        "scoreline": "6-2 6-0",
+        "set1": "6-2",
+        "set2": "6-0",
+        "set3": "",
+        "count": 8,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 43
+      },
+      {
+        "scoreline": "6-2 6-1",
+        "set1": "6-2",
+        "set2": "6-1",
+        "set3": "",
+        "count": 23,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 44
+      },
+      {
+        "scoreline": "6-2 6-2",
+        "set1": "6-2",
+        "set2": "6-2",
+        "set3": "",
+        "count": 38,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 45
+      },
+      {
+        "scoreline": "6-2 6-3",
+        "set1": "6-2",
+        "set2": "6-3",
+        "set3": "",
+        "count": 34,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 46
+      },
+      {
+        "scoreline": "6-2 6-4",
+        "set1": "6-2",
+        "set2": "6-4",
+        "set3": "",
+        "count": 58,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 47
+      },
+      {
+        "scoreline": "6-2 6-7 6-0",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "6-2 6-7 6-1",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      },
+      {
+        "scoreline": "6-2 6-7 6-2",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "6-2 6-7 6-3",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 51
+      },
+      {
+        "scoreline": "6-2 6-7 6-4",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 52
+      },
+      {
+        "scoreline": "6-2 6-7 7-5",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 53
+      },
+      {
+        "scoreline": "6-2 6-7 7-6",
+        "set1": "6-2",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 54
+      },
+      {
+        "scoreline": "6-2 7-5",
+        "set1": "6-2",
+        "set2": "7-5",
+        "set3": "",
+        "count": 23,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 55
+      },
+      {
+        "scoreline": "6-2 7-6",
+        "set1": "6-2",
+        "set2": "7-6",
+        "set3": "",
+        "count": 30,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 56
+      }
+    ],
+    "6-1": [
+      {
+        "scoreline": "6-1 0-6 6-0",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "6-1 0-6 6-1",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "6-1 0-6 6-2",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "6-1 0-6 6-3",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "6-1 0-6 6-4",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "6-1 0-6 7-5",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "6-1 0-6 7-6",
+        "set1": "6-1",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "6-1 1-6 6-0",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "6-1 1-6 6-1",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "6-1 1-6 6-2",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 10
+      },
+      {
+        "scoreline": "6-1 1-6 6-3",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 11
+      },
+      {
+        "scoreline": "6-1 1-6 6-4",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 12
+      },
+      {
+        "scoreline": "6-1 1-6 7-5",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 13
+      },
+      {
+        "scoreline": "6-1 1-6 7-6",
+        "set1": "6-1",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "6-1 2-6 6-0",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 15
+      },
+      {
+        "scoreline": "6-1 2-6 6-1",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "6-1 2-6 6-2",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "6-1 2-6 6-3",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 18
+      },
+      {
+        "scoreline": "6-1 2-6 6-4",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "6-1 2-6 7-5",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "6-1 2-6 7-6",
+        "set1": "6-1",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "6-1 3-6 6-0",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "6-1 3-6 6-1",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "6-1 3-6 6-2",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "6-1 3-6 6-3",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "6-1 3-6 6-4",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 26
+      },
+      {
+        "scoreline": "6-1 3-6 7-5",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "6-1 3-6 7-6",
+        "set1": "6-1",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "6-1 4-6 6-0",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "6-1 4-6 6-1",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "6-1 4-6 6-2",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 31
+      },
+      {
+        "scoreline": "6-1 4-6 6-3",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "6-1 4-6 6-4",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "6-1 4-6 7-5",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 34
+      },
+      {
+        "scoreline": "6-1 4-6 7-6",
+        "set1": "6-1",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "6-1 5-7 6-0",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "6-1 5-7 6-1",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "6-1 5-7 6-2",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "6-1 5-7 6-3",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "6-1 5-7 6-4",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "6-1 5-7 7-5",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "6-1 5-7 7-6",
+        "set1": "6-1",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "6-1 6-0",
+        "set1": "6-1",
+        "set2": "6-0",
+        "set3": "",
+        "count": 11,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 43
+      },
+      {
+        "scoreline": "6-1 6-1",
+        "set1": "6-1",
+        "set2": "6-1",
+        "set3": "",
+        "count": 16,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 44
+      },
+      {
+        "scoreline": "6-1 6-2",
+        "set1": "6-1",
+        "set2": "6-2",
+        "set3": "",
+        "count": 28,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 45
+      },
+      {
+        "scoreline": "6-1 6-3",
+        "set1": "6-1",
+        "set2": "6-3",
+        "set3": "",
+        "count": 20,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 46
+      },
+      {
+        "scoreline": "6-1 6-4",
+        "set1": "6-1",
+        "set2": "6-4",
+        "set3": "",
+        "count": 47,
+        "color": "#4D9F64",
+        "color_bin": "common",
+        "position": 47
+      },
+      {
+        "scoreline": "6-1 6-7 6-0",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "6-1 6-7 6-1",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      },
+      {
+        "scoreline": "6-1 6-7 6-2",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "6-1 6-7 6-3",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 51
+      },
+      {
+        "scoreline": "6-1 6-7 6-4",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 52
+      },
+      {
+        "scoreline": "6-1 6-7 7-5",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 53
+      },
+      {
+        "scoreline": "6-1 6-7 7-6",
+        "set1": "6-1",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 54
+      },
+      {
+        "scoreline": "6-1 7-5",
+        "set1": "6-1",
+        "set2": "7-5",
+        "set3": "",
+        "count": 11,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 55
+      },
+      {
+        "scoreline": "6-1 7-6",
+        "set1": "6-1",
+        "set2": "7-6",
+        "set3": "",
+        "count": 21,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 56
+      }
+    ],
+    "6-0": [
+      {
+        "scoreline": "6-0 0-6 6-0",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "6-0 0-6 6-1",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "6-0 0-6 6-2",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "6-0 0-6 6-3",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "6-0 0-6 6-4",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "6-0 0-6 7-5",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "6-0 0-6 7-6",
+        "set1": "6-0",
+        "set2": "0-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "6-0 1-6 6-0",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "6-0 1-6 6-1",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "6-0 1-6 6-2",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "6-0 1-6 6-3",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 11
+      },
+      {
+        "scoreline": "6-0 1-6 6-4",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 12
+      },
+      {
+        "scoreline": "6-0 1-6 7-5",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "6-0 1-6 7-6",
+        "set1": "6-0",
+        "set2": "1-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "6-0 2-6 6-0",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "6-0 2-6 6-1",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "6-0 2-6 6-2",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "6-0 2-6 6-3",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 18
+      },
+      {
+        "scoreline": "6-0 2-6 6-4",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "6-0 2-6 7-5",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "6-0 2-6 7-6",
+        "set1": "6-0",
+        "set2": "2-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 21
+      },
+      {
+        "scoreline": "6-0 3-6 6-0",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "6-0 3-6 6-1",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 23
+      },
+      {
+        "scoreline": "6-0 3-6 6-2",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 24
+      },
+      {
+        "scoreline": "6-0 3-6 6-3",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 25
+      },
+      {
+        "scoreline": "6-0 3-6 6-4",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 26
+      },
+      {
+        "scoreline": "6-0 3-6 7-5",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 27
+      },
+      {
+        "scoreline": "6-0 3-6 7-6",
+        "set1": "6-0",
+        "set2": "3-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 28
+      },
+      {
+        "scoreline": "6-0 4-6 6-0",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "6-0 4-6 6-1",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "6-0 4-6 6-2",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 31
+      },
+      {
+        "scoreline": "6-0 4-6 6-3",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 32
+      },
+      {
+        "scoreline": "6-0 4-6 6-4",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "6-0 4-6 7-5",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 34
+      },
+      {
+        "scoreline": "6-0 4-6 7-6",
+        "set1": "6-0",
+        "set2": "4-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 35
+      },
+      {
+        "scoreline": "6-0 5-7 6-0",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "6-0 5-7 6-1",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "6-0 5-7 6-2",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "6-0 5-7 6-3",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "6-0 5-7 6-4",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 40
+      },
+      {
+        "scoreline": "6-0 5-7 7-5",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "6-0 5-7 7-6",
+        "set1": "6-0",
+        "set2": "5-7",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 42
+      },
+      {
+        "scoreline": "6-0 6-0",
+        "set1": "6-0",
+        "set2": "6-0",
+        "set3": "",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "6-0 6-1",
+        "set1": "6-0",
+        "set2": "6-1",
+        "set3": "",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 44
+      },
+      {
+        "scoreline": "6-0 6-2",
+        "set1": "6-0",
+        "set2": "6-2",
+        "set3": "",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 45
+      },
+      {
+        "scoreline": "6-0 6-3",
+        "set1": "6-0",
+        "set2": "6-3",
+        "set3": "",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 46
+      },
+      {
+        "scoreline": "6-0 6-4",
+        "set1": "6-0",
+        "set2": "6-4",
+        "set3": "",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 47
+      },
+      {
+        "scoreline": "6-0 6-7 6-0",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "6-0 6-7 6-1",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      },
+      {
+        "scoreline": "6-0 6-7 6-2",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 50
+      },
+      {
+        "scoreline": "6-0 6-7 6-3",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 51
+      },
+      {
+        "scoreline": "6-0 6-7 6-4",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 52
+      },
+      {
+        "scoreline": "6-0 6-7 7-5",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 53
+      },
+      {
+        "scoreline": "6-0 6-7 7-6",
+        "set1": "6-0",
+        "set2": "6-7",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 54
+      },
+      {
+        "scoreline": "6-0 7-5",
+        "set1": "6-0",
+        "set2": "7-5",
+        "set3": "",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 55
+      },
+      {
+        "scoreline": "6-0 7-6",
+        "set1": "6-0",
+        "set2": "7-6",
+        "set3": "",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 56
+      }
+    ],
+    "6-7": [
+      {
+        "scoreline": "6-7 6-0 6-0",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "6-7 6-0 6-1",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 2
+      },
+      {
+        "scoreline": "6-7 6-0 6-2",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "6-7 6-0 6-3",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "6-7 6-0 6-4",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "6-7 6-0 7-5",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "6-7 6-0 7-6",
+        "set1": "6-7",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "6-7 6-1 6-0",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 8
+      },
+      {
+        "scoreline": "6-7 6-1 6-1",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "6-7 6-1 6-2",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 10
+      },
+      {
+        "scoreline": "6-7 6-1 6-3",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "6-7 6-1 6-4",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 12
+      },
+      {
+        "scoreline": "6-7 6-1 7-5",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "6-7 6-1 7-6",
+        "set1": "6-7",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "6-7 6-2 6-0",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "6-7 6-2 6-1",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 16
+      },
+      {
+        "scoreline": "6-7 6-2 6-2",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "6-7 6-2 6-3",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "6-7 6-2 6-4",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 19
+      },
+      {
+        "scoreline": "6-7 6-2 7-5",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "6-7 6-2 7-6",
+        "set1": "6-7",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "6-7 6-3 6-0",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 22
+      },
+      {
+        "scoreline": "6-7 6-3 6-1",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 23
+      },
+      {
+        "scoreline": "6-7 6-3 6-2",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "6-7 6-3 6-3",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "6-7 6-3 6-4",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 10,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 26
+      },
+      {
+        "scoreline": "6-7 6-3 7-5",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 27
+      },
+      {
+        "scoreline": "6-7 6-3 7-6",
+        "set1": "6-7",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "6-7 6-4 6-0",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "6-7 6-4 6-1",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "6-7 6-4 6-2",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 31
+      },
+      {
+        "scoreline": "6-7 6-4 6-3",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "6-7 6-4 6-4",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 33
+      },
+      {
+        "scoreline": "6-7 6-4 7-5",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "6-7 6-4 7-6",
+        "set1": "6-7",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 35
+      },
+      {
+        "scoreline": "6-7 7-5 6-0",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "6-7 7-5 6-1",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 37
+      },
+      {
+        "scoreline": "6-7 7-5 6-2",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "6-7 7-5 6-3",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "6-7 7-5 6-4",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "6-7 7-5 7-5",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 41
+      },
+      {
+        "scoreline": "6-7 7-5 7-6",
+        "set1": "6-7",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "6-7 7-6 6-0",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 43
+      },
+      {
+        "scoreline": "6-7 7-6 6-1",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 44
+      },
+      {
+        "scoreline": "6-7 7-6 6-2",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 45
+      },
+      {
+        "scoreline": "6-7 7-6 6-3",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 11,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 46
+      },
+      {
+        "scoreline": "6-7 7-6 6-4",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 47
+      },
+      {
+        "scoreline": "6-7 7-6 7-5",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 48
+      },
+      {
+        "scoreline": "6-7 7-6 7-6",
+        "set1": "6-7",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 49
+      }
+    ],
+    "5-7": [
+      {
+        "scoreline": "5-7 6-0 6-0",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "5-7 6-0 6-1",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "5-7 6-0 6-2",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "5-7 6-0 6-3",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "5-7 6-0 6-4",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "5-7 6-0 7-5",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "5-7 6-0 7-6",
+        "set1": "5-7",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "5-7 6-1 6-0",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "5-7 6-1 6-1",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "5-7 6-1 6-2",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "5-7 6-1 6-3",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "5-7 6-1 6-4",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 12
+      },
+      {
+        "scoreline": "5-7 6-1 7-5",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "5-7 6-1 7-6",
+        "set1": "5-7",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "5-7 6-2 6-0",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "5-7 6-2 6-1",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "5-7 6-2 6-2",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "5-7 6-2 6-3",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "5-7 6-2 6-4",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 19
+      },
+      {
+        "scoreline": "5-7 6-2 7-5",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "5-7 6-2 7-6",
+        "set1": "5-7",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "5-7 6-3 6-0",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 22
+      },
+      {
+        "scoreline": "5-7 6-3 6-1",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "5-7 6-3 6-2",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "5-7 6-3 6-3",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "5-7 6-3 6-4",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "5-7 6-3 7-5",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 27
+      },
+      {
+        "scoreline": "5-7 6-3 7-6",
+        "set1": "5-7",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "5-7 6-4 6-0",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "5-7 6-4 6-1",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "5-7 6-4 6-2",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "5-7 6-4 6-3",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "5-7 6-4 6-4",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "5-7 6-4 7-5",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "5-7 6-4 7-6",
+        "set1": "5-7",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "5-7 7-5 6-0",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "5-7 7-5 6-1",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 37
+      },
+      {
+        "scoreline": "5-7 7-5 6-2",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "5-7 7-5 6-3",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "5-7 7-5 6-4",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 40
+      },
+      {
+        "scoreline": "5-7 7-5 7-5",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "5-7 7-5 7-6",
+        "set1": "5-7",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "5-7 7-6 6-0",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "5-7 7-6 6-1",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 44
+      },
+      {
+        "scoreline": "5-7 7-6 6-2",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 45
+      },
+      {
+        "scoreline": "5-7 7-6 6-3",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 46
+      },
+      {
+        "scoreline": "5-7 7-6 6-4",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 47
+      },
+      {
+        "scoreline": "5-7 7-6 7-5",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "5-7 7-6 7-6",
+        "set1": "5-7",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      }
+    ],
+    "4-6": [
+      {
+        "scoreline": "4-6 6-0 6-0",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "4-6 6-0 6-1",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "4-6 6-0 6-2",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 3
+      },
+      {
+        "scoreline": "4-6 6-0 6-3",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "4-6 6-0 6-4",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "4-6 6-0 7-5",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 6
+      },
+      {
+        "scoreline": "4-6 6-0 7-6",
+        "set1": "4-6",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "4-6 6-1 6-0",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "4-6 6-1 6-1",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 9
+      },
+      {
+        "scoreline": "4-6 6-1 6-2",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 10
+      },
+      {
+        "scoreline": "4-6 6-1 6-3",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "4-6 6-1 6-4",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "4-6 6-1 7-5",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "4-6 6-1 7-6",
+        "set1": "4-6",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 14
+      },
+      {
+        "scoreline": "4-6 6-2 6-0",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 15
+      },
+      {
+        "scoreline": "4-6 6-2 6-1",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 16
+      },
+      {
+        "scoreline": "4-6 6-2 6-2",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "4-6 6-2 6-3",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "4-6 6-2 6-4",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "4-6 6-2 7-5",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 20
+      },
+      {
+        "scoreline": "4-6 6-2 7-6",
+        "set1": "4-6",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 21
+      },
+      {
+        "scoreline": "4-6 6-3 6-0",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 22
+      },
+      {
+        "scoreline": "4-6 6-3 6-1",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "4-6 6-3 6-2",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "4-6 6-3 6-3",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "4-6 6-3 6-4",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 15,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 26
+      },
+      {
+        "scoreline": "4-6 6-3 7-5",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "4-6 6-3 7-6",
+        "set1": "4-6",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 8,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 28
+      },
+      {
+        "scoreline": "4-6 6-4 6-0",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "4-6 6-4 6-1",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "4-6 6-4 6-2",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 31
+      },
+      {
+        "scoreline": "4-6 6-4 6-3",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 10,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 32
+      },
+      {
+        "scoreline": "4-6 6-4 6-4",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "4-6 6-4 7-5",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "4-6 6-4 7-6",
+        "set1": "4-6",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "4-6 7-5 6-0",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 36
+      },
+      {
+        "scoreline": "4-6 7-5 6-1",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "4-6 7-5 6-2",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "4-6 7-5 6-3",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "4-6 7-5 6-4",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "4-6 7-5 7-5",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 41
+      },
+      {
+        "scoreline": "4-6 7-5 7-6",
+        "set1": "4-6",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "4-6 7-6 6-0",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "4-6 7-6 6-1",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 44
+      },
+      {
+        "scoreline": "4-6 7-6 6-2",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 45
+      },
+      {
+        "scoreline": "4-6 7-6 6-3",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 46
+      },
+      {
+        "scoreline": "4-6 7-6 6-4",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 47
+      },
+      {
+        "scoreline": "4-6 7-6 7-5",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 48
+      },
+      {
+        "scoreline": "4-6 7-6 7-6",
+        "set1": "4-6",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 49
+      }
+    ],
+    "3-6": [
+      {
+        "scoreline": "3-6 6-0 6-0",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "3-6 6-0 6-1",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "3-6 6-0 6-2",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "3-6 6-0 6-3",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "3-6 6-0 6-4",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 5
+      },
+      {
+        "scoreline": "3-6 6-0 7-5",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "3-6 6-0 7-6",
+        "set1": "3-6",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "3-6 6-1 6-0",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "3-6 6-1 6-1",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "3-6 6-1 6-2",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "3-6 6-1 6-3",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "3-6 6-1 6-4",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "3-6 6-1 7-5",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "3-6 6-1 7-6",
+        "set1": "3-6",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 14
+      },
+      {
+        "scoreline": "3-6 6-2 6-0",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "3-6 6-2 6-1",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 16
+      },
+      {
+        "scoreline": "3-6 6-2 6-2",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "3-6 6-2 6-3",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "3-6 6-2 6-4",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 19
+      },
+      {
+        "scoreline": "3-6 6-2 7-5",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 20
+      },
+      {
+        "scoreline": "3-6 6-2 7-6",
+        "set1": "3-6",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "3-6 6-3 6-0",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "3-6 6-3 6-1",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 23
+      },
+      {
+        "scoreline": "3-6 6-3 6-2",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "3-6 6-3 6-3",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "3-6 6-3 6-4",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 14,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 26
+      },
+      {
+        "scoreline": "3-6 6-3 7-5",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "3-6 6-3 7-6",
+        "set1": "3-6",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "3-6 6-4 6-0",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "3-6 6-4 6-1",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "3-6 6-4 6-2",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 31
+      },
+      {
+        "scoreline": "3-6 6-4 6-3",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 6,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 32
+      },
+      {
+        "scoreline": "3-6 6-4 6-4",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "3-6 6-4 7-5",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 34
+      },
+      {
+        "scoreline": "3-6 6-4 7-6",
+        "set1": "3-6",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "3-6 7-5 6-0",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "3-6 7-5 6-1",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "3-6 7-5 6-2",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 38
+      },
+      {
+        "scoreline": "3-6 7-5 6-3",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "3-6 7-5 6-4",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "3-6 7-5 7-5",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "3-6 7-5 7-6",
+        "set1": "3-6",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 42
+      },
+      {
+        "scoreline": "3-6 7-6 6-0",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "3-6 7-6 6-1",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 44
+      },
+      {
+        "scoreline": "3-6 7-6 6-2",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 45
+      },
+      {
+        "scoreline": "3-6 7-6 6-3",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 46
+      },
+      {
+        "scoreline": "3-6 7-6 6-4",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 7,
+        "color": "#A2F359",
+        "color_bin": "uncommon",
+        "position": 47
+      },
+      {
+        "scoreline": "3-6 7-6 7-5",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 48
+      },
+      {
+        "scoreline": "3-6 7-6 7-6",
+        "set1": "3-6",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      }
+    ],
+    "2-6": [
+      {
+        "scoreline": "2-6 6-0 6-0",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "2-6 6-0 6-1",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "2-6 6-0 6-2",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "2-6 6-0 6-3",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "2-6 6-0 6-4",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "2-6 6-0 7-5",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "2-6 6-0 7-6",
+        "set1": "2-6",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "2-6 6-1 6-0",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "2-6 6-1 6-1",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "2-6 6-1 6-2",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 10
+      },
+      {
+        "scoreline": "2-6 6-1 6-3",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 11
+      },
+      {
+        "scoreline": "2-6 6-1 6-4",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "2-6 6-1 7-5",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "2-6 6-1 7-6",
+        "set1": "2-6",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 14
+      },
+      {
+        "scoreline": "2-6 6-2 6-0",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "2-6 6-2 6-1",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "2-6 6-2 6-2",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "2-6 6-2 6-3",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "2-6 6-2 6-4",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "2-6 6-2 7-5",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "2-6 6-2 7-6",
+        "set1": "2-6",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "2-6 6-3 6-0",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 22
+      },
+      {
+        "scoreline": "2-6 6-3 6-1",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 23
+      },
+      {
+        "scoreline": "2-6 6-3 6-2",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "2-6 6-3 6-3",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "2-6 6-3 6-4",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "2-6 6-3 7-5",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "2-6 6-3 7-6",
+        "set1": "2-6",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 28
+      },
+      {
+        "scoreline": "2-6 6-4 6-0",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "2-6 6-4 6-1",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 30
+      },
+      {
+        "scoreline": "2-6 6-4 6-2",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "2-6 6-4 6-3",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 32
+      },
+      {
+        "scoreline": "2-6 6-4 6-4",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 5,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "2-6 6-4 7-5",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 34
+      },
+      {
+        "scoreline": "2-6 6-4 7-6",
+        "set1": "2-6",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 35
+      },
+      {
+        "scoreline": "2-6 7-5 6-0",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "2-6 7-5 6-1",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "2-6 7-5 6-2",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "2-6 7-5 6-3",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 39
+      },
+      {
+        "scoreline": "2-6 7-5 6-4",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "2-6 7-5 7-5",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "2-6 7-5 7-6",
+        "set1": "2-6",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 42
+      },
+      {
+        "scoreline": "2-6 7-6 6-0",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "2-6 7-6 6-1",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 44
+      },
+      {
+        "scoreline": "2-6 7-6 6-2",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 45
+      },
+      {
+        "scoreline": "2-6 7-6 6-3",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 46
+      },
+      {
+        "scoreline": "2-6 7-6 6-4",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 47
+      },
+      {
+        "scoreline": "2-6 7-6 7-5",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 48
+      },
+      {
+        "scoreline": "2-6 7-6 7-6",
+        "set1": "2-6",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 49
+      }
+    ],
+    "1-6": [
+      {
+        "scoreline": "1-6 6-0 6-0",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "1-6 6-0 6-1",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "1-6 6-0 6-2",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "1-6 6-0 6-3",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "1-6 6-0 6-4",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "1-6 6-0 7-5",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "1-6 6-0 7-6",
+        "set1": "1-6",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "1-6 6-1 6-0",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "1-6 6-1 6-1",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "1-6 6-1 6-2",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "1-6 6-1 6-3",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 11
+      },
+      {
+        "scoreline": "1-6 6-1 6-4",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 12
+      },
+      {
+        "scoreline": "1-6 6-1 7-5",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 13
+      },
+      {
+        "scoreline": "1-6 6-1 7-6",
+        "set1": "1-6",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 14
+      },
+      {
+        "scoreline": "1-6 6-2 6-0",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "1-6 6-2 6-1",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "1-6 6-2 6-2",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 17
+      },
+      {
+        "scoreline": "1-6 6-2 6-3",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 18
+      },
+      {
+        "scoreline": "1-6 6-2 6-4",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "1-6 6-2 7-5",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "1-6 6-2 7-6",
+        "set1": "1-6",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 21
+      },
+      {
+        "scoreline": "1-6 6-3 6-0",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "1-6 6-3 6-1",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 23
+      },
+      {
+        "scoreline": "1-6 6-3 6-2",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 3,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 24
+      },
+      {
+        "scoreline": "1-6 6-3 6-3",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 25
+      },
+      {
+        "scoreline": "1-6 6-3 6-4",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 26
+      },
+      {
+        "scoreline": "1-6 6-3 7-5",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 27
+      },
+      {
+        "scoreline": "1-6 6-3 7-6",
+        "set1": "1-6",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 28
+      },
+      {
+        "scoreline": "1-6 6-4 6-0",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 29
+      },
+      {
+        "scoreline": "1-6 6-4 6-1",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "1-6 6-4 6-2",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 31
+      },
+      {
+        "scoreline": "1-6 6-4 6-3",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 32
+      },
+      {
+        "scoreline": "1-6 6-4 6-4",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 33
+      },
+      {
+        "scoreline": "1-6 6-4 7-5",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 34
+      },
+      {
+        "scoreline": "1-6 6-4 7-6",
+        "set1": "1-6",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 35
+      },
+      {
+        "scoreline": "1-6 7-5 6-0",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "1-6 7-5 6-1",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "1-6 7-5 6-2",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "1-6 7-5 6-3",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "1-6 7-5 6-4",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 40
+      },
+      {
+        "scoreline": "1-6 7-5 7-5",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "1-6 7-5 7-6",
+        "set1": "1-6",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 42
+      },
+      {
+        "scoreline": "1-6 7-6 6-0",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "1-6 7-6 6-1",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 44
+      },
+      {
+        "scoreline": "1-6 7-6 6-2",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 4,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 45
+      },
+      {
+        "scoreline": "1-6 7-6 6-3",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 46
+      },
+      {
+        "scoreline": "1-6 7-6 6-4",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 47
+      },
+      {
+        "scoreline": "1-6 7-6 7-5",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 48
+      },
+      {
+        "scoreline": "1-6 7-6 7-6",
+        "set1": "1-6",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 49
+      }
+    ],
+    "0-6": [
+      {
+        "scoreline": "0-6 6-0 6-0",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 1
+      },
+      {
+        "scoreline": "0-6 6-0 6-1",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 2
+      },
+      {
+        "scoreline": "0-6 6-0 6-2",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 3
+      },
+      {
+        "scoreline": "0-6 6-0 6-3",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 4
+      },
+      {
+        "scoreline": "0-6 6-0 6-4",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 5
+      },
+      {
+        "scoreline": "0-6 6-0 7-5",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 6
+      },
+      {
+        "scoreline": "0-6 6-0 7-6",
+        "set1": "0-6",
+        "set2": "6-0",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 7
+      },
+      {
+        "scoreline": "0-6 6-1 6-0",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 8
+      },
+      {
+        "scoreline": "0-6 6-1 6-1",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 9
+      },
+      {
+        "scoreline": "0-6 6-1 6-2",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 10
+      },
+      {
+        "scoreline": "0-6 6-1 6-3",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 11
+      },
+      {
+        "scoreline": "0-6 6-1 6-4",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 12
+      },
+      {
+        "scoreline": "0-6 6-1 7-5",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 13
+      },
+      {
+        "scoreline": "0-6 6-1 7-6",
+        "set1": "0-6",
+        "set2": "6-1",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 14
+      },
+      {
+        "scoreline": "0-6 6-2 6-0",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 15
+      },
+      {
+        "scoreline": "0-6 6-2 6-1",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 16
+      },
+      {
+        "scoreline": "0-6 6-2 6-2",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 17
+      },
+      {
+        "scoreline": "0-6 6-2 6-3",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 18
+      },
+      {
+        "scoreline": "0-6 6-2 6-4",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 19
+      },
+      {
+        "scoreline": "0-6 6-2 7-5",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 20
+      },
+      {
+        "scoreline": "0-6 6-2 7-6",
+        "set1": "0-6",
+        "set2": "6-2",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 21
+      },
+      {
+        "scoreline": "0-6 6-3 6-0",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 22
+      },
+      {
+        "scoreline": "0-6 6-3 6-1",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 23
+      },
+      {
+        "scoreline": "0-6 6-3 6-2",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 24
+      },
+      {
+        "scoreline": "0-6 6-3 6-3",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 25
+      },
+      {
+        "scoreline": "0-6 6-3 6-4",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 26
+      },
+      {
+        "scoreline": "0-6 6-3 7-5",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 27
+      },
+      {
+        "scoreline": "0-6 6-3 7-6",
+        "set1": "0-6",
+        "set2": "6-3",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 28
+      },
+      {
+        "scoreline": "0-6 6-4 6-0",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 29
+      },
+      {
+        "scoreline": "0-6 6-4 6-1",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 30
+      },
+      {
+        "scoreline": "0-6 6-4 6-2",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 31
+      },
+      {
+        "scoreline": "0-6 6-4 6-3",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 32
+      },
+      {
+        "scoreline": "0-6 6-4 6-4",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "6-4",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 33
+      },
+      {
+        "scoreline": "0-6 6-4 7-5",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 34
+      },
+      {
+        "scoreline": "0-6 6-4 7-6",
+        "set1": "0-6",
+        "set2": "6-4",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 35
+      },
+      {
+        "scoreline": "0-6 7-5 6-0",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 36
+      },
+      {
+        "scoreline": "0-6 7-5 6-1",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 37
+      },
+      {
+        "scoreline": "0-6 7-5 6-2",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 38
+      },
+      {
+        "scoreline": "0-6 7-5 6-3",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "6-3",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 39
+      },
+      {
+        "scoreline": "0-6 7-5 6-4",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 40
+      },
+      {
+        "scoreline": "0-6 7-5 7-5",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "7-5",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 41
+      },
+      {
+        "scoreline": "0-6 7-5 7-6",
+        "set1": "0-6",
+        "set2": "7-5",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 42
+      },
+      {
+        "scoreline": "0-6 7-6 6-0",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "6-0",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 43
+      },
+      {
+        "scoreline": "0-6 7-6 6-1",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "6-1",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 44
+      },
+      {
+        "scoreline": "0-6 7-6 6-2",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "6-2",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 45
+      },
+      {
+        "scoreline": "0-6 7-6 6-3",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "6-3",
+        "count": 2,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 46
+      },
+      {
+        "scoreline": "0-6 7-6 6-4",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "6-4",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 47
+      },
+      {
+        "scoreline": "0-6 7-6 7-5",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "7-5",
+        "count": 1,
+        "color": "#FBFAA7",
+        "color_bin": "rare",
+        "position": 48
+      },
+      {
+        "scoreline": "0-6 7-6 7-6",
+        "set1": "0-6",
+        "set2": "7-6",
+        "set3": "7-6",
+        "count": 0,
+        "color": "#f0f0f0",
+        "color_bin": "not_observed",
+        "position": 49
+      }
+    ]
+  }
+};
+        
+        // Configuration
+        const config = {
+            boxSize: 60,
+            spacing: 5,
+            rowHeight: 70,
+            labelWidth: 50,
+            topMargin: 50,
+            leftMargin: 60
+        };
+        
+        // Calculate dimensions
+        const maxBoxesPerRow = Math.max(...Object.values(jsonData.scorelines).map(row => row.length));
+        const width = config.leftMargin + maxBoxesPerRow * (config.boxSize + config.spacing);
+        const height = config.topMargin + jsonData.first_sets.length * config.rowHeight;
+        
+        // Create SVG
+        const svg = d3.select("#chart-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+        
+        // Add title and subtitle
+        svg.append("text")
+            .attr("class", "title-text")
+            .attr("x", width / 2)
+            .attr("y", 20)
+            .style("font-size", "18px")
+            .text("Tennis Scorigami - 2024 ATP Tour");
+            
+        svg.append("text")
+            .attr("class", "subtitle-text")
+            .attr("x", width / 2)
+            .attr("y", 40)
+            .style("font-size", "14px")
+            .text(`${jsonData.statistics.total_observed} of ${jsonData.statistics.total_possible} possible scorelines observed (${jsonData.statistics.fill_percentage}%)`);
+        
+        // Create tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+        
+        // Add row labels (first set scores)
+        svg.selectAll(".row-label")
+            .data(jsonData.first_sets)
+            .enter()
+            .append("text")
+            .attr("class", "row-label")
+            .attr("x", config.leftMargin - 10)
+            .attr("y", (d, i) => config.topMargin + i * config.rowHeight + config.rowHeight / 2)
+            .text(d => d);
+        
+        // Draw boxes for each scoreline
+        jsonData.first_sets.forEach((firstSet, rowIndex) => {
+            const scorelineData = jsonData.scorelines[firstSet];
+            
+            // Create a group for each row
+            const rowGroup = svg.append("g")
+                .attr("class", "row")
+                .attr("data-first-set", firstSet);
+            
+            // Add scoreline boxes
+            scorelineData.forEach((scoreline, boxIndex) => {
+                const x = config.leftMargin + boxIndex * (config.boxSize + config.spacing);
+                const y = config.topMargin + rowIndex * config.rowHeight;
+                
+                // Add box
+                const box = rowGroup.append("rect")
+                    .attr("class", "scoreline-box")
+                    .attr("data-count", scoreline.count)
+                    .attr("data-scoreline", scoreline.scoreline)
+                    .attr("data-color-bin", scoreline.color_bin)
+                    .attr("data-sets", scoreline.set3 ? "three" : "two")
+                    .attr("x", x)
+                    .attr("y", y)
+                    .attr("width", config.boxSize)
+                    .attr("height", config.boxSize)
+                    .attr("fill", scoreline.color)
+                    .attr("rx", 3)  // Rounded corners
+                    .on("mouseover", function(event) {
+                        // Highlight the box
+                        d3.select(this)
+                            .attr("stroke", "#333")
+                            .attr("stroke-width", 2);
+                        
+                        // Show tooltip
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", 1);
+                        
+                        let tooltipContent = `
+                            <div><strong>Scoreline:</strong> ${scoreline.scoreline}</div>
+                            <div><strong>Frequency:</strong> ${scoreline.count} ${scoreline.count === 1 ? "match" : "matches"}</div>
+                        `;
+                        
+                        tooltip.html(tooltipContent)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        // Restore box appearance
+                        d3.select(this)
+                            .attr("stroke", "white")
+                            .attr("stroke-width", 1);
+                        
+                        // Hide tooltip
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+                
+                // Text color based on background brightness
+                const textColor = (scoreline.color_bin === "common" || scoreline.color_bin === "very_common") ? "white" : "black";
+                
+                // Add set scores as separate lines
+                // Set 1
+                rowGroup.append("text")
+                    .attr("class", "score-text")
+                    .attr("x", x + config.boxSize / 2)
+                    .attr("y", y + config.boxSize / 3 - 2)
+                    .attr("fill", textColor)
+                    .style("font-size", "12px")
+                    .text(scoreline.set1);
+                
+                // Set 2
+                rowGroup.append("text")
+                    .attr("class", "score-text")
+                    .attr("x", x + config.boxSize / 2)
+                    .attr("y", y + config.boxSize / 2)
+                    .attr("fill", textColor)
+                    .style("font-size", "12px")
+                    .text(scoreline.set2);
+                
+                // Set 3 (if exists)
+                if (scoreline.set3) {
+                    rowGroup.append("text")
+                        .attr("class", "score-text")
+                        .attr("x", x + config.boxSize / 2)
+                        .attr("y", y + config.boxSize * 2/3 + 2)
+                        .attr("fill", textColor)
+                        .style("font-size", "12px")
+                        .text(scoreline.set3);
+                }
+            });
+        });
+        
+        // Add caption at the bottom
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height - 5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "12px")
+            .text("Rows organized by first set result (7-6 at top to 0-6 at bottom)");
+        
+        // Add legend to the separate div (bottom right)
+        const legend = d3.select("#legend");
+        
+        legend.append("div")
+            .attr("class", "legend-title")
+            .text("Frequency");
+        
+        // Legend items
+        const legendItems = [
+            { label: jsonData.frequency_breaks.very_common, color: jsonData.color_scale.very_common },
+            { label: jsonData.frequency_breaks.common, color: jsonData.color_scale.common },
+            { label: jsonData.frequency_breaks.uncommon, color: jsonData.color_scale.uncommon },
+            { label: jsonData.frequency_breaks.rare, color: jsonData.color_scale.rare },
+            { label: "Not observed", color: jsonData.color_scale.not_observed }
+        ];
+        
+        legendItems.forEach(item => {
+            const legendItem = legend.append("div")
+                .attr("class", "legend-item");
+            
+            legendItem.append("div")
+                .attr("class", "legend-color")
+                .style("background-color", item.color);
+            
+            legendItem.append("div")
+                .text(item.label);
+        });
+        
+        // Add controls functionality
+        d3.select("#all-button").on("click", function() {
+            d3.selectAll(".filter-buttons button").classed("active", false);
+            d3.select(this).classed("active", true);
+            d3.selectAll(".scoreline-box").style("display", "block");
+        });
+        
+        d3.select("#observed-button").on("click", function() {
+            d3.selectAll(".filter-buttons button").classed("active", false);
+            d3.select(this).classed("active", true);
+            d3.selectAll(".scoreline-box").style("display", function() {
+                return d3.select(this).attr("data-color-bin") === "not_observed" ? "none" : "block";
+            });
+        });
+        
+        d3.select("#not-observed-button").on("click", function() {
+            d3.selectAll(".filter-buttons button").classed("active", false);
+            d3.select(this).classed("active", true);
+            d3.selectAll(".scoreline-box").style("display", function() {
+                return d3.select(this).attr("data-color-bin") === "not_observed" ? "block" : "none";
+            });
+        });
+        
+        d3.select("#straight-sets-button").on("click", function() {
+            d3.selectAll(".scoreline-box").style("display", function() {
+                const isDisplayed = d3.select(this).style("display") !== "none";
+                const isStraightSets = d3.select(this).attr("data-sets") === "two";
+                return isDisplayed && isStraightSets ? "block" : "none";
+            });
+        });
+        
+        d3.select("#three-sets-button").on("click", function() {
+            d3.selectAll(".scoreline-box").style("display", function() {
+                const isDisplayed = d3.select(this).style("display") !== "none";
+                const isThreeSets = d3.select(this).attr("data-sets") === "three";
+                return isDisplayed && isThreeSets ? "block" : "none";
+            });
+        });
+        
+        d3.select("#reset-button").on("click", function() {
+            d3.select("#all-button").dispatch("click");
+        });
+        
+        // Export SVG functionality
+        d3.select("#export-svg").on("click", function() {
+            // Get the SVG element and its dimensions
+            const svgElement = document.querySelector("svg");
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgElement);
+            
+            // Create a Blob with the SVG content
+            const blob = new Blob([svgString], {type: "image/svg+xml"});
+            
+            // Create a link element and trigger download
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "tennis_scorigami.svg";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    </script>
+</body>
+</html>

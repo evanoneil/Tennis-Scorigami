@@ -1,0 +1,1384 @@
+---
+title: "Game, dataSet, Match!"
+author: "Evan O'Neil"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cosmo
+    highlight: tango
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(ggplot2)
+library(knitr)
+library(DT)
+library(kableExtra)
+library(scales)
+library(lubridate)
+library(viridis)
+library(leaflet)  # For interactive maps
+library(countrycode)  # For country code conversion
+library(htmltools)  # For HTML widgets
+library(plotly)  # For interactive plots
+library(broom)  # For cleaning up statistical output
+
+# Set theme for consistent visualization
+theme_set(theme_minimal())
+```
+
+# 1. Introduction {.tabset}
+
+## Overview
+This document is a draft of an Exploratory Data Analysis of all ATP Tennis matches from the 2024 season. The dataset contains information about professional tennis matches played during the 2024 ATP Tour, including match outcomes, player statistics, tournament details, and more.
+
+## Data Source
+A note, I changed my data source, though the spirit of the data remains the same from my proposal. In my exploratory work I noticed inconsistencies in the statistical output adn dug deeper to find the dataset was incomplete, it stopped before the U.S. Open. While a setback, this represents one of the important outcomes of exploratory work when combined with subject matter expertise.
+
+I searched for the sources of the data and realized it was all coming from Tennis Abstract, the leading name for tennis data. With a littile more digging I saw that all this data and more was available on Jeff Sackmann's (the lead organizer of Tennis Abstract) GitHub page. I saw that not only was the complete data for the 2023 season available, but also the complete data for the 2024 season is available too. I chose to switch to the more recent data. The structure is the same, but with the most recent data I thought I could ultimately transform this into content for my tennis analysis newsletter and 2024 data would be of more interest to my readers than 2023. 
+
+# 2. Data Loading and Initial Exploration {.tabset}
+
+## Data Loading
+```{r load-data}
+# Function to download and load data directly from a GitHub URL
+get_github_data <- function(github_url) {
+  # Convert GitHub URL to raw URL
+  raw_url <- github_url
+  raw_url <- gsub("github\\.com", "raw.githubusercontent.com", raw_url)
+  raw_url <- gsub("/blob/", "/", raw_url)
+  
+  # Create a temporary file
+  temp_file <- tempfile(fileext = ".csv")
+  
+  # Download the file
+  message("Downloading data from GitHub...")
+  download_success <- tryCatch({
+    download.file(raw_url, temp_file, mode = "wb", quiet = TRUE)
+    TRUE
+  }, error = function(e) {
+    message("Error downloading the file: ", e$message)
+    FALSE
+  })
+  
+  # Load the data if download was successful
+  if (download_success && file.exists(temp_file)) {
+    message("Download successful, loading data...")
+    data <- read.csv(temp_file)
+    return(data)
+  } else {
+    message("Failed to download or load the data.")
+    return(NULL)
+  }
+}
+
+tennis_data <- get_github_data("https://github.com/JeffSackmann/tennis_atp/blob/master/atp_matches_2024.csv")
+
+# Check if data loaded successfully
+if (!is.null(tennis_data)) {
+  # Show first few rows
+  head(tennis_data)
+  
+  # Get dimensions
+  message("Dataset dimensions: ", nrow(tennis_data), " rows × ", ncol(tennis_data), " columns")
+}
+```
+
+## 2.1 Dataset Overview
+
+```{r dataset-overview}
+# Display the first few rows as a DT table
+datatable(head(tennis_data, 10),
+          options = list(scrollX = TRUE, 
+                         autoWidth = TRUE,
+                         pageLength = 5),
+          caption = "First 10 Rows of ATP Tennis 2023 Dataset") %>%
+  formatStyle(columns = colnames(tennis_data), fontSize = '90%')
+```
+
+## 2.2 Column Names and Data Types
+
+```{r column-info}
+# List all column names
+col_names <- colnames(tennis_data)
+
+# Create a data frame to explain column names in direct terms using my vast tennis knowledge
+column_explanations <- data.frame(
+  Column = c(
+    "tourney_id", "tourney_name", "surface", "draw_size", "tourney_level",
+    "winner_id", "winner_seed", "winner_name", "winner_hand", "winner_ht", "winner_ioc", "winner_age",
+    "loser_id", "loser_seed", "loser_name", "loser_hand", "loser_ht", "loser_ioc", "loser_age",
+    "score", "best_of", "round", "minutes",
+    "w_ace", "w_df", "w_svpt", "w_1stIn", "w_1stWon", "w_2ndWon", "w_SvGms", "w_bpSaved", "w_bpFaced",
+    "l_ace", "l_df", "l_svpt", "l_1stIn", "l_1stWon", "l_2ndWon", "l_SvGms", "l_bpSaved", "l_bpFaced",
+    "winner_rank", "winner_rank_points", "loser_rank", "loser_rank_points"
+  ),
+  Description = c(
+    "Unique tournament identifier", "Tournament name", "Playing surface type (Hard, Clay, Grass, Carpet)", 
+    "Number of players in the tournament draw", "Tournament tier (G=Grand Slam, M=Masters 1000, A=ATP 500/250, D=Davis Cup, F=Tour Finals)",
+    "Winner's player ID", "Winner's seeding in the tournament", "Winner's full name", "Winner's playing hand (R=Right, L=Left)", 
+    "Winner's height in cm", "Winner's country code", "Winner's age in years",
+    "Loser's player ID", "Loser's seeding in the tournament", "Loser's full name", "Loser's playing hand (R=Right, L=Left)", 
+    "Loser's height in cm", "Loser's country code", "Loser's age in years",
+    "Match score (sets)", "Maximum number of sets (3 or 5)", "Tournament round", "Match duration in minutes",
+    "Winner's ace count", "Winner's double fault count", "Winner's service points played", 
+    "Winner's first serves in", "Winner's first serve points won", "Winner's second serve points won",
+    "Winner's service games played", "Winner's break points saved", "Winner's break points faced",
+    "Loser's ace count", "Loser's double fault count", "Loser's service points played", 
+    "Loser's first serves in", "Loser's first serve points won", "Loser's second serve points won",
+    "Loser's service games played", "Loser's break points saved", "Loser's break points faced",
+    "Winner's ATP ranking", "Winner's ATP ranking points", "Loser's ATP ranking", "Loser's ATP ranking points"
+  )
+)
+
+# Display column explanations in a wonderful table
+library(DT)
+datatable(column_explanations, 
+          options = list(scrollX = TRUE, 
+                         autoWidth = TRUE,
+                         pageLength = 15),
+          caption = "Summary Statistics for Key Numeric Variables",
+          rownames = FALSE) 
+```
+
+## 2.3 Summary Statistics 
+
+```{r summary-stats}
+# Get all numeric columns for comprehensive summary
+numeric_cols <- sapply(tennis_data, is.numeric)
+numeric_col_names <- names(tennis_data)[numeric_cols]
+
+# Function to calculate summary statistics for a numeric column
+get_column_summary <- function(data, column) {
+  if(column %in% colnames(data)) {
+    values <- data[[column]]
+    values <- values[!is.na(values)]
+    
+    if(length(values) > 0) {
+      return(data.frame(
+        Column = column,
+        Min = min(values, na.rm = TRUE),
+        Q1 = quantile(values, 0.25, na.rm = TRUE),
+        Median = median(values, na.rm = TRUE),
+        Mean = mean(values, na.rm = TRUE),
+        Q3 = quantile(values, 0.75, na.rm = TRUE),
+        Max = max(values, na.rm = TRUE),
+        Missing = sum(is.na(data[[column]])),
+        Missing_Pct = round(sum(is.na(data[[column]])) / nrow(data) * 100, 1)
+      ))
+    }
+  }
+  return(NULL)
+}
+
+# Collect summary statistics for each numeric column
+summary_list <- lapply(numeric_col_names, function(col) get_column_summary(tennis_data, col))
+summary_df <- do.call(rbind, summary_list)
+
+# Format dates using base R
+if("tourney_date" %in% colnames(summary_df)) {
+  if(class(tennis_data$tourney_date)[1] == "Date") {
+    summary_df$Min[summary_df$Column == "tourney_date"] <- as.character(as.Date(summary_df$Min[summary_df$Column == "tourney_date"], origin = "1970-01-01"))
+    summary_df$Median[summary_df$Column == "tourney_date"] <- as.character(as.Date(summary_df$Median[summary_df$Column == "tourney_date"], origin = "1970-01-01"))
+    summary_df$Mean[summary_df$Column == "tourney_date"] <- as.character(as.Date(summary_df$Mean[summary_df$Column == "tourney_date"], origin = "1970-01-01"))
+    summary_df$Q1[summary_df$Column == "tourney_date"] <- as.character(as.Date(summary_df$Q1[summary_df$Column == "tourney_date"], origin = "1970-01-01"))
+    summary_df$Q3[summary_df$Column == "tourney_date"] <- as.character(as.Date(summary_df$Q3[summary_df$Column == "tourney_date"], origin = "1970-01-01"))
+    summary_df$Max[summary_df$Column == "tourney_date"] <- as.character(as.Date(summary_df$Max[summary_df$Column == "tourney_date"], origin = "1970-01-01"))
+  }
+}
+
+# Display using DT
+datatable(summary_df, 
+          options = list(scrollX = TRUE, 
+                         pageLength = 15,
+                         dom = 'ftip'),
+          caption = "Summary Statistics for All Numeric Variables",
+          rownames = FALSE)
+```
+
+```{r numeric-small-multiples-ggplot, fig.width=12, fig.height=15, warning=FALSE, message=FALSE}
+# Get all numeric columns
+numeric_cols <- names(tennis_data)[sapply(tennis_data, is.numeric)]
+
+# Select a subset of numeric columns (exclude IDs and dates)
+important_numeric_cols <- numeric_cols[!(numeric_cols %in% c("tourney_id", "match_num", "tourney_date", "winner_id", "loser_id"))]
+
+# Create a long-format data frame for plotting
+numeric_data_long <- tennis_data %>%
+  select(all_of(important_numeric_cols[1:min(16, length(important_numeric_cols))])) %>%
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+
+# Calculate summary statistics for each variable
+stats_summary <- numeric_data_long %>%
+  group_by(variable) %>%
+  summarise(
+    mean_val = mean(value, na.rm = TRUE),
+    median_val = median(value, na.rm = TRUE),
+    min_val = min(value, na.rm = TRUE),
+    max_val = max(value, na.rm = TRUE)
+  )
+
+# Create a function to add labels to each facet
+label_facets <- function(orig_var, stats_df) {
+  # Get stats for this variable
+  var_stats <- stats_df %>% filter(variable == orig_var)
+  
+  # Make a nice variable name
+  nice_name <- gsub("_", " ", orig_var)
+  nice_name <- gsub("([[:lower:]])([[:upper:]])", "\\1 \\2", nice_name)
+  nice_name <- tools::toTitleCase(nice_name)
+  
+  # Return the formatted label
+  return(paste0(
+    nice_name, "\n",
+    "Mean: ", round(var_stats$mean_val, 1), "\n",
+    "Median: ", round(var_stats$median_val, 1), "\n",
+    "Min: ", round(var_stats$min_val, 1), "\n",
+    "Max: ", round(var_stats$max_val, 1)
+  ))
+}
+
+# Create the plot
+ggplot(numeric_data_long, aes(x = value)) +
+  geom_histogram(bins = 30, fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_vline(data = stats_summary, aes(xintercept = mean_val), 
+             color = "red", linetype = "dashed", size = 0.8) +
+  geom_vline(data = stats_summary, aes(xintercept = median_val), 
+             color = "blue", linetype = "solid", size = 0.8) +
+  facet_wrap(~ variable, scales = "free", ncol = 4,
+             labeller = labeller(variable = function(x) sapply(x, label_facets, stats_summary))) +
+  labs(
+    title = "Distribution of Numeric Variables",
+    subtitle = "With mean (red dashed) and median (blue solid) lines",
+    x = "Value",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7),
+    panel.spacing = unit(1, "lines")
+  )
+```
+
+## 2.4 Missing Values Analysis
+
+```{r missing-values}
+# Calculate missing values in each column
+missing_values <- colSums(is.na(tennis_data))
+
+# Show columns with missing values
+missing_df <- data.frame(
+  Column = names(missing_values),
+  Missing_Count = missing_values,
+  Missing_Percent = round(missing_values / nrow(tennis_data) * 100, 2)
+) %>%
+  arrange(desc(Missing_Count))
+
+# Display columns with any missing values using DT
+datatable(missing_df %>% filter(Missing_Count > 0), 
+          options = list(pageLength = 15,
+                         dom = 'ltip',
+                         order = list(list(2, 'desc'))),
+          caption = "Columns with Missing Values") %>%
+  formatStyle('Missing_Percent',
+              background = styleColorBar(c(0, 100), 'lightblue'),
+              backgroundSize = '100% 90%',
+              backgroundRepeat = 'no-repeat',
+              backgroundPosition = 'center')
+```
+
+# 3. Data Cleaning and Preparation {.tabset}
+
+## Cleaning Steps
+```{r data-cleaning}
+# Create a clean working copy of the dataset
+atp_clean <- tennis_data %>%
+  # Convert tournament date to actual date format if it's not already
+  mutate(
+    tourney_date_str = as.character(tourney_date),
+    # Format assuming YYYYMMDD format
+    tourney_date = if(nchar(tourney_date_str[1]) == 8) {
+      ymd(tourney_date_str)
+    } else {
+      tourney_date  
+    }
+  ) %>%
+  select(-tourney_date_str)  # Remove temporary column
+
+# Extract year, month from tournament date if it was converted successfully
+if(is.Date(atp_clean$tourney_date[1])) {
+  atp_clean <- atp_clean %>%
+    mutate(
+      year = year(tourney_date),
+      month = month(tourney_date)
+    )
+}
+
+# Add calculated metrics where possible
+atp_clean <- atp_clean %>%
+  mutate(
+    # Only calculate percentages when denominators exist and are not zero
+    winner_1st_serve_pct = ifelse(!is.na(w_svpt) & !is.na(w_1stIn) & w_svpt > 0, 
+                                 w_1stIn / w_svpt * 100, NA),
+    winner_1st_serve_won_pct = ifelse(!is.na(w_1stIn) & !is.na(w_1stWon) & w_1stIn > 0,
+                                     w_1stWon / w_1stIn * 100, NA),
+    loser_1st_serve_pct = ifelse(!is.na(l_svpt) & !is.na(l_1stIn) & l_svpt > 0,
+                                l_1stIn / l_svpt * 100, NA),
+    # Create categorical Round variable
+    round_category = case_when(
+      round == "F" ~ "Final",
+      round == "SF" ~ "Semi-Final",
+      round == "QF" ~ "Quarter-Final",
+      round == "R16" ~ "Round of 16",
+      round == "R32" ~ "Round of 32",
+      round == "R64" ~ "Round of 64",
+      round == "R128" ~ "Round of 128",
+      TRUE ~ round
+    )
+  )
+
+# List of ATP 500 tournaments for proper classification
+atp_500_tournaments <- c("Acapulco", "Barcelona", "Dubai", "Halle", "Hamburg", 
+                         "Queen's Club", "Rotterdam", "Washington", "Rio De Janeiro")
+
+# Add tournament level classification
+atp_clean <- atp_clean %>%
+  mutate(
+    # Add 500/250 tournament level distinction as "A" classification is insufficient
+    tourney_level_detail = case_when(
+      tourney_level == "G" ~ "Grand Slam",
+      tourney_level == "M" ~ "Masters 1000",
+      tourney_level == "F" ~ "Tour Finals",
+      tourney_level == "D" ~ "Davis Cup",
+      tourney_level == "O" ~ "Olympics", 
+      tourney_level == "A" & str_detect(tourney_name, paste(atp_500_tournaments, collapse = "|")) ~ "ATP Tour 500",
+      tourney_level == "A" ~ "ATP Tour 250",
+      TRUE ~ "Other"
+    )
+  )
+
+# Create a table showing tournament level classification results
+tourney_level_counts <- atp_clean %>%
+  group_by(tourney_level_detail) %>%
+  summarise(
+    Tournaments = n_distinct(tourney_id),
+    Matches = n()
+  ) %>%
+  arrange(desc(Matches))
+
+# Display table with tournament level counts
+datatable(tourney_level_counts,
+          options = list(dom = 't', 
+                         ordering = FALSE),
+          caption = "Tournament Levels in the Dataset")
+
+# Show a quick summary of the derived variables
+derived_vars <- atp_clean %>%
+  summarise(
+    `Avg Winner 1st Serve %` = round(mean(winner_1st_serve_pct, na.rm = TRUE), 1),
+    `Avg Winner 1st Serve Won %` = round(mean(winner_1st_serve_won_pct, na.rm = TRUE), 1),
+    `Avg Loser 1st Serve %` = round(mean(loser_1st_serve_pct, na.rm = TRUE), 1),
+    `Total Tournaments` = n_distinct(tourney_id),
+    `Total Players` = n_distinct(c(winner_name, loser_name))
+
+# Display derived variables summary
+datatable(derived_vars,
+          options = list(dom = 't',
+                         ordering = FALSE,
+                         paging = FALSE),
+          caption = "Summary of Derived Variables")
+```
+
+# 4. Data Analysis {.tabset}
+
+## 4.1 Player Analysis {.tabset .tabset-pills}
+
+### 4.1.1 Geographic Analysis {.tabset}
+
+#### Data Table
+```{r player-countries-map-fixed, fig.width=10, fig.height=7, warning=FALSE, message=FALSE}
+# Install and load required packages
+if (!require("countrycode")) {
+  install.packages("countrycode")
+  library(countrycode)
+} else {
+  library(countrycode)
+}
+
+# Extract unique players with their countries
+unique_players <- rbind(
+  atp_clean %>% 
+    select(player_id = winner_id, player_name = winner_name, ioc = winner_ioc) %>%
+    distinct(),
+  atp_clean %>% 
+    select(player_id = loser_id, player_name = loser_name, ioc = loser_ioc) %>%
+    distinct()
+) %>%
+  distinct(player_id, .keep_all = TRUE) %>%
+  filter(!is.na(player_id) & !is.na(ioc))
+
+# Count players per country
+country_counts <- table(unique_players$ioc)
+country_df <- data.frame(
+  ioc = names(country_counts),
+  count = as.numeric(country_counts)
+)
+
+# Convert IOC codes to ISO codes for mapping
+country_df$iso3c <- countrycode(country_df$ioc, "ioc", "iso3c")
+country_df$country_name <- countrycode(country_df$ioc, "ioc", "country.name")
+
+# Create world map data
+world_map <- map_data("world")
+
+# Fix specific countries with known mapping issues
+# Fix for the smallest of the continued issues that Russia presents
+if ("RUS" %in% country_df$ioc) {
+  # Get Russia's player count
+  russia_count <- country_df$count[country_df$ioc == "RUS"]
+}
+
+# Fix for USA
+if ("USA" %in% country_df$ioc) {
+  country_df$country_name[country_df$ioc == "USA"] <- "USA"
+}
+
+# Fix for UK
+if ("GBR" %in% country_df$ioc) {
+  country_df$country_name[country_df$ioc == "GBR"] <- "UK"
+}
+
+# Join the country counts with map data
+map_data <- left_join(
+  world_map,
+  country_df,
+  by = c("region" = "country_name")
+)
+
+# Explicitly set Russia's count in the map data
+map_data$count[map_data$region == "Russia"] <- russia_count
+
+# Fill NA values with 0
+map_data$count[is.na(map_data$count)] <- 0
+
+# Create the chloropleth map
+ggplot(map_data, aes(x = long, y = lat, group = group, fill = count)) +
+  geom_polygon(color = "white", size = 0.1) +
+  scale_fill_viridis_c(
+    name = "Player Count",
+    option = "plasma",
+    direction = -1,
+    limits = c(0, max(country_df$count)),
+    breaks = c(0, 5, 10, 15, 20, 30, 35)
+  ) +
+  labs(
+    title = "Geographic Distribution of ATP Tennis Players (2024)",
+    subtitle = paste0("Based on unique players per country, total of ", nrow(unique_players), " players"),
+    caption = "Note: Countries with no players shown in yellow"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  )
+```
+
+#### Interactive Map
+```{r player-map-leaflet, fig.width=10, fig.height=7, warning=FALSE, message=FALSE}
+# Extract unique players with their countries
+unique_players <- rbind(
+  atp_clean %>% 
+    select(player_id = winner_id, player_name = winner_name, ioc = winner_ioc) %>%
+    distinct(),
+  atp_clean %>% 
+    select(player_id = loser_id, player_name = loser_name, ioc = loser_ioc) %>%
+    distinct()
+) %>%
+  distinct(player_id, .keep_all = TRUE) %>%
+  filter(!is.na(player_id) & !is.na(ioc))
+
+# Count players per country
+country_counts <- table(unique_players$ioc)
+country_df <- data.frame(
+  ioc = names(country_counts),
+  count = as.numeric(country_counts)
+)
+
+# Convert IOC codes to ISO3 codes for mapping
+country_df$iso3c <- countrycode(country_df$ioc, "ioc", "iso3c")
+country_df$country_name <- countrycode(country_df$ioc, "ioc", "country.name")
+
+# Handle missing conversions or special cases
+country_df$country_name[country_df$ioc == "USA"] <- "United States"
+country_df$country_name[country_df$ioc == "GBR"] <- "United Kingdom"
+country_df$iso3c[country_df$ioc == "RUS"] <- "RUS" # Ensure Russia has a code
+
+# Create a world map with Leaflet
+# Get world country polygons from the rworldmap package
+if (!require("rworldmap")) {
+  install.packages("rworldmap")
+  library(rworldmap)
+}
+
+# Get world map data
+world_map_data <- rworldmap::getMap(resolution = "low")
+
+# Create a color palette
+pal <- colorNumeric(
+  palette = "plasma",
+  domain = country_df$count,
+  reverse = TRUE
+)
+
+# Initialize the leaflet map
+leaflet(world_map_data) %>%
+  addTiles() %>%  # Add default OpenStreetMap tiles
+  setView(lng = 0, lat = 30, zoom = 2) %>%  # Set initial view
+  # Add countries colored by player count
+  addPolygons(
+    fillColor = ~pal(country_df$count[match(NAME, country_df$country_name)]),
+    weight = 1,
+    opacity = 1,
+    color = "white",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#666",
+      fillOpacity = 0.9,
+      bringToFront = TRUE
+    ),
+    label = ~paste0(
+      NAME, ": ", 
+      ifelse(is.na(country_df$count[match(NAME, country_df$country_name)]), 
+             "0", 
+             country_df$count[match(NAME, country_df$country_name)]),
+      " players"
+    ),
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto"
+    )
+  ) %>%
+  # Add a legend
+  addLegend(
+    position = "bottomright",
+    pal = pal,
+    values = country_df$count,
+    title = "Player Count",
+    opacity = 0.7
+  )
+```
+
+#### Player Distribution Bar Chart
+```{r player-nationality-bar, fig.width=10, fig.height=8}
+# Get the top 25 countries by player count
+top_countries <- country_df %>%
+  arrange(desc(count)) %>%
+  head(25)
+
+# Create a bar chart
+ggplot(top_countries, aes(x = reorder(ioc, count), y = count, fill = count)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = count), hjust = -0.2) +
+  scale_fill_viridis_c(direction = -1) +
+  labs(
+    title = "Top 25 Countries by Number of ATP Tennis Players (2023)",
+    subtitle = "Based on unique player IDs per country",
+    x = "Country (IOC Code)",
+    y = "Number of Players"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  coord_flip()
+```
+
+The colors should match up between the chart and the map. I was having difficulties matching them, this will be fixed in the final version.
+
+### 4.1.2 Box plot of player age
+```{r player-age-boxplot, fig.width=8, fig.height=6}
+# Extract player ages
+player_ages <- c(atp_clean$winner_age, atp_clean$loser_age)
+player_ages <- player_ages[!is.na(player_ages)]
+
+# Create data frame for plotting
+age_df <- data.frame(
+  age = player_ages,
+  category = "Player Age"
+)
+
+# Generate summary statistics for reference
+age_summary <- data.frame(
+  Min = min(player_ages, na.rm = TRUE),
+  Q1 = quantile(player_ages, 0.25, na.rm = TRUE),
+  Median = median(player_ages, na.rm = TRUE),
+  Mean = mean(player_ages, na.rm = TRUE),
+  Q3 = quantile(player_ages, 0.75, na.rm = TRUE),
+  Max = max(player_ages, na.rm = TRUE),
+  SD = sd(player_ages, na.rm = TRUE)
+)
+
+# Create the box plot
+ggplot(age_df, aes(x = category, y = age)) +
+  geom_boxplot(fill = "steelblue", alpha = 0.7, width = 0.5) +
+  geom_jitter(width = 0.2, alpha = 0.1, color = "darkblue") +
+  labs(
+    title = "Distribution of ATP Tennis Player Ages (2024)",
+    subtitle = paste0("Mean age: ", round(mean(player_ages, na.rm = TRUE), 1), 
+                     " years | Median age: ", round(median(player_ages, na.rm = TRUE), 1), " years"),
+    y = "Age (years)",
+    x = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 10)
+  )
+
+# Display summary statistics using DT
+datatable(age_summary, 
+          caption = "Summary Statistics for Player Age",
+          options = list(dom = 't', 
+                         pageLength = 1,
+                         scrollX = TRUE,
+                         columnDefs = list(list(
+                           className = 'dt-center', 
+                           targets = "_all"))),
+          rownames = FALSE) %>%
+  formatRound(columns = names(age_summary), digits = 1)
+```
+
+### 4.1.3 Box plot of player height
+#### Or a tale of Viacheslav Bielinskyi, the 2 foot, 330 pound player from Ukraine.
+```{r player-height-boxplot, fig.width=8, fig.height=6}
+# Extract player heights
+player_heights <- c(atp_clean$winner_ht, atp_clean$loser_ht)
+player_heights <- player_heights[!is.na(player_heights)]
+
+# Create data frame for plotting
+height_df <- data.frame(
+  height = player_heights,
+  category = "Player Height"
+)
+
+# Generate summary statistics for reference
+height_summary <- data.frame(
+  Min = min(player_heights, na.rm = TRUE),
+  Q1 = quantile(player_heights, 0.25, na.rm = TRUE),
+  Median = median(player_heights, na.rm = TRUE),
+  Mean = mean(player_heights, na.rm = TRUE),
+  Q3 = quantile(player_heights, 0.75, na.rm = TRUE),
+  Max = max(player_heights, na.rm = TRUE),
+  SD = sd(player_heights, na.rm = TRUE)
+)
+
+# Create the box plot
+ggplot(height_df, aes(x = category, y = height)) +
+  geom_boxplot(fill = "seagreen", alpha = 0.7, width = 0.5) +
+  geom_jitter(width = 0.2, alpha = 0.1, color = "darkgreen") +
+  labs(
+    title = "Distribution of ATP Tennis Player Heights (2024)",
+    subtitle = paste0("Mean height: ", round(mean(player_heights, na.rm = TRUE), 1), 
+                     " cm | Median height: ", round(median(player_heights, na.rm = TRUE), 1), " cm"),
+    y = "Height (cm)",
+    x = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 10)
+  )
+
+# Display summary statistics using DT
+datatable(height_summary, 
+          caption = "Summary Statistics for Player Height (cm)",
+          options = list(dom = 't', 
+                         pageLength = 1,
+                         scrollX = TRUE),
+          rownames = FALSE) %>%
+  formatRound(columns = names(height_summary), digits = 1)
+```
+This represents an interesting error. I thought the 71cm height of a player was an error, especially as I experienced the difficult competitive prospects of being 5'10", I was very impressed that a player who was under 3 feet could compete at a major event. Even more impressive was the fact that upon looking him up of the official ATP website, I saw that he weighs in at 330 pounds! To compete at this level, with these physical dimensions, all while your home country is being subjected to a brutal invasion is quite impressive. This is all from official documentation so I left it in, surely an organization as well funded as the ATP would have corrected any errors on this scale if they were true errors.
+
+### 4.1.4 Bar chart of right handed vs left handed players
+```{r player-handedness-barchart, fig.width=8, fig.height=6}
+# Extract player handedness
+player_hands <- c(atp_clean$winner_hand, atp_clean$loser_hand)
+hand_counts <- table(player_hands)
+
+# Create data frame for plotting
+hand_df <- data.frame(
+  hand = names(hand_counts),
+  count = as.numeric(hand_counts)
+)
+
+# Recode for better labels
+hand_df$hand_label <- factor(hand_df$hand, 
+                             levels = c("R", "L", "U"), 
+                             labels = c("Right-handed", "Left-handed", "Unknown"))
+
+# Calculate percentages
+hand_df$percentage <- hand_df$count / sum(hand_df$count) * 100
+
+# Bar chart of handedness
+ggplot(hand_df, aes(x = hand_label, y = count, fill = hand_label)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  geom_text(aes(label = paste0(count, " (", round(percentage, 1), "%)")),
+            vjust = -0.5, size = 4) +
+  scale_fill_manual(values = c("Right-handed" = "#3366CC", 
+                               "Left-handed" = "#FF9933", 
+                               "Unknown" = "#CCCCCC")) +
+  labs(
+    title = "Distribution of ATP Tennis Player Handedness (2024)",
+    subtitle = "Count and percentage of right-handed vs. left-handed players",
+    y = "Number of Player Appearances",
+    x = NULL,
+    fill = "Handedness"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.text = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Display table using DT
+datatable(hand_df[, c("hand_label", "count", "percentage")], 
+          caption = "Player Handedness Distribution",
+          options = list(dom = 't', 
+                         pageLength = 3,
+                         scrollX = TRUE),
+          colnames = c("Handedness", "Count", "Percentage (%)"),
+          rownames = FALSE) %>%
+  formatRound(columns = "percentage", digits = 1) %>%
+  formatStyle('percentage',
+              background = styleColorBar(c(0, max(hand_df$percentage)), 'lightblue'),
+              backgroundSize = '95% 80%',
+              backgroundRepeat = 'no-repeat',
+              backgroundPosition = 'center')
+```
+
+
+
+## 4.2 Tournament Analysis
+
+```{r tournament-analysis}
+# Analyze tournament levels with the detailed classification
+if("tourney_level_detail" %in% colnames(atp_clean)) {
+  # Count matches by detailed tournament level
+  tourney_counts_detail <- atp_clean %>%
+    group_by(tourney_level_detail) %>%
+    summarise(
+      tournaments = n_distinct(tourney_id),
+      matches = n()
+    ) %>%
+    arrange(desc(matches))
+  
+  # Display results
+  tourney_counts_detail
+  
+  # Create visualization with separate 500 and 250 levels
+  ggplot(tourney_counts_detail, aes(x = reorder(tourney_level_detail, matches), 
+                                   y = matches, fill = tourney_level_detail)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = matches), vjust = -0.5, color = "black", size = 3.5) +
+    labs(title = "Number of Matches by Tournament Level",
+         subtitle = "With ATP 500 and ATP 250 properly distinguished",
+         x = "Tournament Level",
+         y = "Number of Matches") +
+    theme(legend.position = "none",
+          axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  # You can also add this analysis of tournament levels by surface
+  tourney_surface <- atp_clean %>%
+    group_by(tourney_level_detail, surface) %>%
+    summarise(matches = n()) %>%
+    arrange(tourney_level_detail, desc(matches))
+  
+  # Create stacked bar chart of surfaces by tournament level
+  ggplot(tourney_surface, aes(x = tourney_level_detail, y = matches, fill = surface)) +
+    geom_bar(stat = "identity", position = "stack") +
+    labs(title = "Tournament Levels by Surface",
+         x = "Tournament Level",
+         y = "Number of Matches",
+         fill = "Surface") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+```
+
+# 5. Player Performance Analysis
+
+```{r player-performance}
+# Top players by wins
+top_winners <- atp_clean %>%
+  group_by(winner_name) %>%
+  summarise(
+    wins = n(),
+    win_pct = n() / length(unique(c(winner_name, loser_name))) * 100,
+    avg_rank = mean(winner_rank, na.rm = TRUE)
+  ) %>%
+  arrange(desc(wins)) %>%
+  head(10)
+
+# Display results with DT
+datatable(top_winners,
+          options = list(dom = 't',
+                         ordering = TRUE),
+          caption = "Top 10 Players by Number of Wins") %>%
+  formatRound(columns = c("win_pct", "avg_rank"), digits = 1)
+
+# Create visualization
+ggplot(top_winners, aes(x = reorder(winner_name, wins), y = wins)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = wins), hjust = -0.2) +
+  labs(title = "Top 10 Players by Number of Wins",
+       x = "Player",
+       y = "Number of Wins") +
+  coord_flip() +
+  theme_minimal()
+
+# Calculate win/loss records for all players
+all_players <- data.frame(
+  player = c(atp_clean$winner_name, atp_clean$loser_name),
+  result = c(rep("win", nrow(atp_clean)), rep("loss", nrow(atp_clean)))
+
+player_records <- all_players %>%
+  group_by(player) %>%
+  summarise(
+    matches = n(),
+    wins = sum(result == "win"),
+    losses = sum(result == "loss"),
+    win_pct = round(wins / matches * 100, 1)
+  ) %>%
+  filter(matches >= 10) %>%  # Only include players with at least 15 matches
+  arrange(desc(win_pct)) %>%
+  head(10)
+
+# Display top players by win percentage
+datatable(player_records,
+          options = list(dom = 't',
+                         pageLength = 10),
+          caption = "Top 10 Players by Win Percentage (min. 10 matches)")
+```
+Including only players with 15 matches was an entirely arbitrary number selection, I'll search for more substantive ways to make that decision.
+
+# 6. Surface Analysis 
+
+```{r surface-analysis}
+# Match duration analysis by surface
+if("minutes" %in% colnames(atp_clean) && "surface" %in% colnames(atp_clean)) {
+  # Calculate average duration by surface
+  duration_by_surface <- atp_clean %>%
+    filter(!is.na(minutes)) %>%
+    group_by(surface) %>%
+    summarise(
+      avg_duration = mean(minutes, na.rm = TRUE),
+      median_duration = median(minutes, na.rm = TRUE),
+      min_duration = min(minutes, na.rm = TRUE),
+      max_duration = max(minutes, na.rm = TRUE),
+      matches = n()
+    ) %>%
+    arrange(desc(avg_duration))
+  
+  # Display results with DT
+  datatable(duration_by_surface,
+            options = list(dom = 't',
+                           ordering = TRUE),
+            caption = "Match Duration by Surface") %>%
+    formatRound(columns = c("avg_duration", "median_duration", "min_duration", "max_duration"), digits = 1)
+  
+  # Create visualization
+  ggplot(duration_by_surface, aes(x = reorder(surface, avg_duration), y = avg_duration, fill = surface)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = round(avg_duration, 1)), vjust = -0.5, color = "black", size = 3.5) +
+    labs(title = "Average Match Duration by Surface (minutes)",
+         x = "Surface",
+         y = "Average Duration (minutes)") +
+    theme_minimal() +
+    theme(legend.position = "none")
+}
+
+# Players with most matches on each surface
+players_by_surface <- atp_clean %>%
+  filter(!is.na(surface)) %>%
+  group_by(player_name = winner_name, surface) %>%
+  summarise(wins = n()) %>%
+  bind_rows(
+    atp_clean %>%
+      filter(!is.na(surface)) %>%
+      group_by(player_name = loser_name, surface) %>%
+      summarise(losses = n())
+  ) %>%
+  group_by(player_name, surface) %>%
+  summarise(
+    matches = sum(wins, na.rm = TRUE) + sum(losses, na.rm = TRUE),
+    wins = sum(wins, na.rm = TRUE),
+    win_pct = round(wins / matches * 100, 1)
+  ) %>%
+  arrange(surface, desc(matches)) %>%
+  group_by(surface) %>%
+  slice_head(n = 5)
+
+# Display players by surface
+datatable(players_by_surface,
+          options = list(pageLength = 15,
+                         order = list(list(0, 'asc'), list(2, 'desc'))),
+          caption = "Top 5 Players by Number of Matches on Each Surface")
+
+# Analyze aces by surface
+if(all(c("w_ace", "l_ace", "surface") %in% colnames(atp_clean))) {
+  # Calculate average aces by surface
+  aces_by_surface <- atp_clean %>%
+    filter(!is.na(w_ace) & !is.na(l_ace)) %>%
+    group_by(surface) %>%
+    summarise(
+      avg_total_aces = mean(w_ace + l_ace, na.rm = TRUE),
+      matches = n()
+    ) %>%
+    arrange(desc(avg_total_aces))
+  
+  # Display results
+  aces_by_surface
+  
+  # Create visualization
+  ggplot(aces_by_surface, aes(x = reorder(surface, avg_total_aces), y = avg_total_aces, fill = surface)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Average Aces per Match by Surface",
+         x = "Surface",
+         y = "Average Aces") +
+    theme(legend.position = "none")
+}
+
+# Analyze first serve percentage by surface
+if("winner_1st_serve_pct" %in% colnames(atp_clean) && "surface" %in% colnames(atp_clean)) {
+  # Calculate average first serve percentage by surface
+  first_serve_by_surface <- atp_clean %>%
+    filter(!is.na(winner_1st_serve_pct)) %>%
+    group_by(surface) %>%
+    summarise(
+      avg_first_serve_pct = mean(winner_1st_serve_pct, na.rm = TRUE),
+      matches = n()
+    ) %>%
+    arrange(desc(avg_first_serve_pct))
+  
+  # Display results
+  first_serve_by_surface
+  
+  # Create visualization
+  ggplot(first_serve_by_surface, aes(x = reorder(surface, avg_first_serve_pct), 
+                                    y = avg_first_serve_pct, fill = surface)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Average First Serve Percentage by Surface",
+         x = "Surface",
+         y = "First Serve %") +
+    theme(legend.position = "none")
+}
+```
+
+# 7. Statistical Analysis {.tabset}
+
+## Surface Impact on Match Time
+```{r statistical-tests}
+# ANOVA test for match duration by surface
+if("minutes" %in% colnames(atp_clean) && "surface" %in% colnames(atp_clean)) {
+  # Only run test if we have multiple surfaces with duration data
+  surface_with_duration <- atp_clean %>%
+    filter(!is.na(minutes)) %>%
+    group_by(surface) %>%
+    summarise(count = n()) %>%
+    filter(count > 5)  # Ensure enough samples per group
+  
+  if(nrow(surface_with_duration) > 1) {
+    # Subset data for the test
+    duration_data <- atp_clean %>%
+      filter(!is.na(minutes) & surface %in% surface_with_duration$surface)
+    
+    # Run ANOVA
+    duration_anova <- aov(minutes ~ surface, data = duration_data)
+    anova_summary <- summary(duration_anova)
+    
+    # Format ANOVA results as a table
+    anova_table <- data.frame(
+      Source = c("Surface", "Residuals"),
+      Df = c(anova_summary[[1]][["Df"]][1], anova_summary[[1]][["Df"]][2]),
+      Sum_Sq = c(anova_summary[[1]][["Sum Sq"]][1], anova_summary[[1]][["Sum Sq"]][2]),
+      Mean_Sq = c(anova_summary[[1]][["Mean Sq"]][1], anova_summary[[1]][["Mean Sq"]][2]),
+      F_value = c(anova_summary[[1]][["F value"]][1], NA),
+      P_value = c(anova_summary[[1]][["Pr(>F)"]][1], NA),
+      Significance = c(
+        ifelse(anova_summary[[1]][["Pr(>F)"]][1] < 0.001, "***",
+               ifelse(anova_summary[[1]][["Pr(>F)"]][1] < 0.01, "**",
+                      ifelse(anova_summary[[1]][["Pr(>F)"]][1] < 0.05, "*", ""))),
+        ""
+      )
+    )
+    
+    # Display ANOVA results
+    datatable(anova_table,
+              options = list(dom = 't',
+                             ordering = FALSE),
+              caption = "ANOVA: Match Duration by Surface") %>%
+      formatRound(columns = c("Sum_Sq", "Mean_Sq", "F_value", "P_value"), digits = 2)
+    
+    # Post-hoc test if ANOVA is significant
+    if(anova_summary[[1]][["Pr(>F)"]][1] < 0.05) {
+      tukey_result <- TukeyHSD(duration_anova)
+      
+      # Format Tukey results as a table
+      tukey_df <- as.data.frame(tukey_result$surface)
+      tukey_df$comparison <- rownames(tukey_df)
+      tukey_df <- tukey_df %>%
+        select(comparison, diff, lwr, upr, `p adj`)
+      
+      # Display Tukey results
+      datatable(tukey_df,
+                options = list(dom = 't',
+                               ordering = TRUE),
+                caption = "Tukey HSD: Pairwise Comparisons of Match Duration by Surface") %>%
+        formatRound(columns = c("diff", "lwr", "upr", "p adj"), digits = 2)
+    }
+  }
+}
+```
+
+## First Serve % and Match Outcome
+```{r first-serve-analysis}
+# Analysis of first serve percentage and match outcome
+if("winner_1st_serve_pct" %in% colnames(atp_clean) && "loser_1st_serve_pct" %in% colnames(atp_clean)) {
+  # Create a dataset for analysis
+  serve_data <- atp_clean %>%
+    filter(!is.na(winner_1st_serve_pct) & !is.na(loser_1st_serve_pct)) %>%
+    mutate(
+      winner_had_better_1st_serve = winner_1st_serve_pct > loser_1st_serve_pct,
+      serve_diff = winner_1st_serve_pct - loser_1st_serve_pct
+    )
+  
+  # Calculate how often the player with better first serve % wins
+  better_serve_wins <- serve_data %>%
+    summarise(
+      total_matches = n(),
+      better_serve_winner_count = sum(winner_had_better_1st_serve),
+      better_serve_winner_pct = round(100 * sum(winner_had_better_1st_serve) / n(), 1)
+    )
+  
+  # Display results
+  datatable(better_serve_wins,
+            options = list(dom = 't', ordering = FALSE),
+            caption = "How Often Does the Player with Better 1st Serve % Win?") %>%
+    formatRound(columns = "better_serve_winner_pct", digits = 1)
+  
+  # Visualize the relationship
+  ggplot(serve_data, aes(x = serve_diff)) +
+    geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+    labs(
+      title = "Difference in 1st Serve % Between Winners and Losers",
+      x = "Winner's 1st Serve % - Loser's 1st Serve %",
+      y = "Count"
+    ) +
+    theme_minimal()
+  
+  # Statistical test - is the difference significant?
+  t_test_result <- t.test(serve_data$winner_1st_serve_pct, serve_data$loser_1st_serve_pct, paired = TRUE)
+  
+  # Format t-test results
+  t_test_df <- data.frame(
+    Statistic = c("t-value", "df", "p-value", "Mean Difference", "95% CI Lower", "95% CI Upper"),
+    Value = c(
+      t_test_result$statistic,
+      t_test_result$parameter,
+      t_test_result$p.value,
+      t_test_result$estimate[1] - t_test_result$estimate[2],  # Correct way to calculate mean difference
+      t_test_result$conf.int[1],
+      t_test_result$conf.int[2]
+    )
+  )
+  
+  # Display t-test results
+  datatable(t_test_df,
+            options = list(dom = 't', ordering = FALSE),
+            caption = "Paired t-test: Winner vs. Loser 1st Serve %") %>%
+    formatRound(columns = "Value", digits = 4)
+}
+```
+
+## Handedness Analysis
+```{r handedness-analysis}
+# Analysis of left-handers vs. right-handers
+if("winner_hand" %in% colnames(atp_clean) && "loser_hand" %in% colnames(atp_clean)) {
+  # Create a dataset for analysis
+  handedness_data <- atp_clean %>%
+    filter(!is.na(winner_hand) & !is.na(loser_hand)) %>%
+    mutate(
+      match_type = case_when(
+        winner_hand == "L" & loser_hand == "R" ~ "Left beats Right",
+        winner_hand == "R" & loser_hand == "L" ~ "Right beats Left",
+        winner_hand == "L" & loser_hand == "L" ~ "Left beats Left",
+        winner_hand == "R" & loser_hand == "R" ~ "Right beats Right",
+        TRUE ~ "Other"
+      )
+    )
+  
+  # Count matches by handedness combination
+  handedness_counts <- handedness_data %>%
+    count(match_type) %>%
+    arrange(desc(n))
+  
+  # Display results
+  datatable(handedness_counts,
+            options = list(dom = 't', ordering = FALSE),
+            caption = "Match Outcomes by Player Handedness")
+  
+  # Calculate win rates for left vs right matchups
+  left_vs_right <- handedness_data %>%
+    filter(winner_hand %in% c("L", "R") & loser_hand %in% c("L", "R")) %>%
+    summarise(
+      left_vs_right_matches = sum(winner_hand == "L" & loser_hand == "R") + 
+                              sum(winner_hand == "R" & loser_hand == "L"),
+      left_beats_right = sum(winner_hand == "L" & loser_hand == "R"),
+      left_beats_right_pct = round(100 * sum(winner_hand == "L" & loser_hand == "R") / 
+                                  (sum(winner_hand == "L" & loser_hand == "R") + 
+                                   sum(winner_hand == "R" & loser_hand == "L")), 1)
+    )
+  
+  # Display left vs right results
+  datatable(left_vs_right,
+            options = list(dom = 't', ordering = FALSE),
+            caption = "Left-Handed vs. Right-Handed Player Matchups") %>%
+    formatRound(columns = "left_beats_right_pct", digits = 1)
+  
+  # Chi-square test for independence
+  # Create contingency table
+  handedness_table <- table(handedness_data$winner_hand, handedness_data$loser_hand)
+  
+  # Run chi-square test
+  chi_test <- chisq.test(handedness_table)
+  
+  # Format chi-square results
+  chi_test_df <- data.frame(
+    Statistic = c("Chi-square", "df", "p-value"),
+    Value = c(chi_test$statistic, chi_test$parameter, chi_test$p.value)
+  )
+  
+  # Display chi-square results
+  datatable(chi_test_df,
+            options = list(dom = 't', ordering = FALSE),
+            caption = "Chi-square Test: Winner Handedness vs. Loser Handedness") %>%
+    formatRound(columns = "Value", digits = 4)
+}
+```
+
+## Racquet Brand Analysis
+```{r racquet-brand-analysis}
+# Load the tennis sponsorships data
+sponsorships <- read.csv("tennis-sponsorships.csv", stringsAsFactors = FALSE)
+
+# Clean and prepare the sponsorships data
+sponsorships <- sponsorships %>%
+  mutate(
+    player_name = paste(First.Name, Last.Name),
+    racquet_brand = Racket
+  ) %>%
+  select(player_name, racquet_brand, Country)
+
+# Merge with match data
+if(exists("atp_clean")) {
+  # Create a dataset with all player appearances
+  all_players <- rbind(
+    atp_clean %>% 
+      select(player_name = winner_name, result = "win"),
+    atp_clean %>% 
+      select(player_name = loser_name, result = "loss")
+  )
+  
+  # Join with sponsorships data
+  players_with_racquets <- all_players %>%
+    left_join(sponsorships, by = "player_name") %>%
+    filter(!is.na(racquet_brand))
+  
+  # Calculate win rates by racquet brand
+  racquet_performance <- players_with_racquets %>%
+    group_by(racquet_brand) %>%
+    summarise(
+      total_matches = n(),
+      wins = sum(result == "win"),
+      losses = sum(result == "loss"),
+      win_rate = round(100 * sum(result == "win") / n(), 1)
+    ) %>%
+    filter(total_matches >= 10) %>%  # Only include brands with sufficient data
+    arrange(desc(win_rate))
+  
+  # Display results
+  datatable(racquet_performance,
+            options = list(dom = 't', pageLength = nrow(racquet_performance)),
+            caption = "Performance by Racquet Brand") %>%
+    formatRound(columns = "win_rate", digits = 1)
+  
+  # Visualize the top racquet brands by win rate
+  top_racquets <- racquet_performance %>%
+    filter(total_matches >= 20) %>%  # Only include brands with more data for visualization
+    arrange(desc(win_rate)) %>%
+    head(10)
+  
+  ggplot(top_racquets, aes(x = reorder(racquet_brand, win_rate), y = win_rate)) +
+    geom_bar(stat = "identity", fill = "darkblue") +
+    geom_text(aes(label = paste0(win_rate, "%")), hjust = -0.2) +
+    labs(
+      title = "Win Rate by Racquet Brand",
+      subtitle = "Minimum 20 matches played",
+      x = "Racquet Brand",
+      y = "Win Rate (%)"
+    ) +
+    coord_flip() +
+    theme_minimal()
+  
+  # ANOVA test for racquet brand effect on win rate
+  # Prepare data for ANOVA
+  racquet_anova_data <- players_with_racquets %>%
+    mutate(result_numeric = ifelse(result == "win", 1, 0)) %>%
+    filter(racquet_brand %in% top_racquets$racquet_brand)
+  
+  # Run ANOVA
+  racquet_anova <- aov(result_numeric ~ racquet_brand, data = racquet_anova_data)
+  anova_summary <- summary(racquet_anova)
+  
+  # Format ANOVA results
+  anova_table <- data.frame(
+    Source = c("Racquet Brand", "Residuals"),
+    Df = c(anova_summary[[1]][["Df"]][1], anova_summary[[1]][["Df"]][2]),
+    Sum_Sq = c(anova_summary[[1]][["Sum Sq"]][1], anova_summary[[1]][["Sum Sq"]][2]),
+    Mean_Sq = c(anova_summary[[1]][["Mean Sq"]][1], anova_summary[[1]][["Mean Sq"]][2]),
+    F_value = c(anova_summary[[1]][["F value"]][1], NA),
+    P_value = c(anova_summary[[1]][["Pr(>F)"]][1], NA),
+    Significance = c(
+      ifelse(anova_summary[[1]][["Pr(>F)"]][1] < 0.001, "***",
+             ifelse(anova_summary[[1]][["Pr(>F)"]][1] < 0.01, "**",
+                    ifelse(anova_summary[[1]][["Pr(>F)"]][1] < 0.05, "*", ""))),
+      ""
+    )
+  )
+  
+  # Display ANOVA results
+  datatable(anova_table,
+            options = list(dom = 't', ordering = FALSE),
+            caption = "ANOVA: Effect of Racquet Brand on Win Rate") %>%
+    formatRound(columns = c("Sum_Sq", "Mean_Sq", "F_value", "P_value"), digits = 4)
+}
+```
+
+# 8. Interesting Findings {.tabset}
+
+## Key Insights
+```{r interesting-findings}
+# Find upset matches (lower ranked player beating higher ranked player)
+if(all(c("winner_rank", "loser_rank") %in% colnames(atp_clean))) {
+  upsets <- atp_clean %>%
+    filter(!is.na(winner_rank) & !is.na(loser_rank)) %>%
+    filter(winner_rank > loser_rank) %>%
+    mutate(
+      rank_difference = winner_rank - loser_rank,
+      upset_magnitude = rank_difference / loser_rank
+    ) %>%
+    arrange(desc(upset_magnitude))
+  
+  # Show top upsets with DT
+  top_upsets <- head(upsets[, c("winner_name", "winner_rank", "loser_name", "loser_rank", 
+                               "rank_difference", "tourney_name")], 5)
+  
+  datatable(top_upsets,
+            caption = "Top 5 Biggest Upsets (by ranking difference magnitude)",
+            options = list(dom = 't', ordering = FALSE))
+```
+
+## Longest Matches
+```{r longest-matches}
+# Find longest matches
+if("minutes" %in% colnames(atp_clean)) {
+  longest_matches <- atp_clean %>%
+    filter(!is.na(minutes)) %>%
+    arrange(desc(minutes))
+  
+  # Show longest matches with DT
+  top_longest <- head(longest_matches[, c("winner_name", "loser_name", "minutes", 
+                                         "tourney_name", "round")], 5)
+  
+  datatable(top_longest,
+            caption = "Top 5 Longest Matches",
+            options = list(dom = 't', ordering = FALSE))
+```
+
+# 9. Conclusion {.tabset}
+
+## Summary
+```{r summary-findings}
+# Calculate key summary statistics
+summary_stats <- data.frame(
+  Metric = c(
+    "Total Matches", 
+    "Number of Tournaments",
+    "Number of Different Winners",
+    "Average Match Duration (mins)",
+    "Most Common Surface",
+    "Average First Serve Percentage",
+    "Average Aces per Match",
+    "Grand Slam Matches",
+    "ATP 500 Matches",
+    "ATP 250 Matches",
+    "Masters 1000 Matches",
+    "Davis Cup Matches",
+    "Upset Rate (%)"
+  ),
+  Value = c(
+    nrow(atp_clean),
+    length(unique(atp_clean$tourney_id)),
+    length(unique(atp_clean$winner_name)),
+    round(mean(atp_clean$minutes, na.rm = TRUE), 1),
+    names(which.max(table(atp_clean$surface))),
+    round(mean(atp_clean$winner_1st_serve_pct, na.rm = TRUE), 1),
+    round(mean(atp_clean$w_ace + atp_clean$l_ace, na.rm = TRUE), 1),
+    sum(atp_clean$tourney_level_detail == "Grand Slam", na.rm = TRUE),
+    sum(atp_clean$tourney_level_detail == "ATP Tour 500", na.rm = TRUE),
+    sum(atp_clean$tourney_level_detail == "ATP Tour 250", na.rm = TRUE),
+    sum(atp_clean$tourney_level_detail == "Masters 1000", na.rm = TRUE),
+    sum(atp_clean$tourney_level_detail == "Davis Cup", na.rm = TRUE),
+    round(100 * sum(atp_clean$winner_rank > atp_clean$loser_rank, na.rm = TRUE) / 
+            sum(!is.na(atp_clean$winner_rank) & !is.na(atp_clean$loser_rank)), 1)
+  )
+)
+
+# Display summary using DT
+datatable(summary_stats, 
+          caption = "Summary of Key Tennis Statistics",
+          options = list(dom = 't', 
+                         ordering = FALSE,
+                         pageLength = nrow(summary_stats)))
+```
+
+## Future Work
+To complete this analysis for the final presentation, I will:
+
+1. Develop more sophisticated statistical models
+2. Create polished, consistent visualizations 
+3. Prepare a cohesive narrative around the key findings
+4. Explore adding the racquet data, as mentioned in my proposal

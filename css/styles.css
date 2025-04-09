@@ -1,0 +1,1862 @@
+/* Tennis Scorigami Scrollytelling Styles */
+
+/* GT Planar Font Definitions */
+@font-face {
+    font-family: 'GT Planar Italic Bold';
+    src: url('../fonts/GT-Planar-Italic-30-Bold-Trial.woff2') format('woff2');
+    font-weight: bold;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'GT Planar Italic Light';
+    src: url('../fonts/GT-Planar-Italic-30-Light-Trial.woff2') format('woff2');
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'GT Planar Regular';
+    src: url('../fonts/GT-Planar-Regular-Trial.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'GT Planar Light';
+    src: url('../fonts/GT-Planar-Light-Trial.woff2') format('woff2');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'GT Planar Retalic Bold';
+    src: url('../fonts/GT-Planar-Retalic-30-Bold-Trial.woff2') format('woff2');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'GT Planar Retalic Light';
+    src: url('../fonts/GT-Planar-Retalic-30-Light-Trial.woff2') format('woff2');
+    font-weight: 300;
+    font-style: normal;
+}
+
+/* General Styles */
+body {
+    font-family: "GT Planar Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent scrolling on the body */
+    background-color: #f8f9fa;
+    height: 100vh; /* Full viewport height */
+    display: flex;
+    flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: "GT Planar Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin-top: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Header Styles */
+header {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 0;
+    text-align: center;
+    height: 10vh; /* Fixed height at 10vh */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin: 0;
+}
+
+.header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1e3a8a;
+    text-decoration: none;
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+nav li {
+    margin-left: 1.5rem;
+}
+
+nav a {
+    color: #4b5563;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+nav a:hover {
+    color: #1e3a8a;
+}
+
+/* Main Content */
+main {
+    padding: 0;
+    flex: 1; /* Take up remaining space */
+    display: flex;
+    flex-direction: column;
+    height: 90vh; /* Remaining viewport height */
+    width: 100%; /* Changed from max-width to width */
+    margin: 0 auto;
+}
+
+section {
+    margin-bottom: 3rem;
+}
+
+.hero {
+    text-align: center;
+    padding: 4rem 0;
+    background-color: #e0e7ff;
+}
+
+.hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #1e3a8a;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    color: #4b5563;
+}
+
+/* Scrollytelling Styles */
+.scrollytelling-container {
+    position: relative;
+    display: flex;
+    height: 100vh;
+}
+
+.steps-container {
+    flex: 0 0 35%;
+    overflow-y: auto;
+    padding: 2rem;
+}
+
+.step {
+    min-height: 80vh;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin-bottom: 2rem;
+    border-left: 3px solid transparent;
+}
+
+.step.active {
+    border-left: 3px solid #1e3a8a;
+}
+
+.visualization-container {
+    background-color: #f9f2e2; /* Cream background */
+    padding: 2rem 2.5rem !important; /* Restore original padding */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    margin: 0 !important; /* Ensure no margin anywhere */
+    min-height: 400px; /* Keep increased minimum height */
+    width: 100% !important; /* Override previous width setting */
+    max-width: none !important; /* Remove any max-width constraints */
+    box-sizing: border-box; /* Include padding in width calculation */
+    position: relative; /* Ensure correct stacking context */
+}
+
+/* Remove the explanatory text at the bottom of the visualization */
+.visualization-container::after {
+    content: ""; /* Empty content to remove the text */
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+}
+
+#main-viz {
+    width: 100% !important;
+    height: 60vh; /* Slightly reduced from 65vh */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: none !important; /* Remove any max-width constraints */
+    position: relative; /* Ensure proper positioning */
+    margin: 0 !important; /* Remove any margin */
+    overflow: visible; /* Allow visualization to exceed container if needed */
+}
+
+#main-viz svg {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Explorer section styles */
+.explorer-content {
+    background-color: #f9f2e2;
+    padding: 2rem;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Statistics Section */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #1e3a8a;
+    margin-bottom: 0.5rem;
+}
+
+.stat-title {
+    font-size: 1.2rem;
+    color: #4b5563;
+}
+
+/* Historical Charts Section */
+.historical-charts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.chart-container {
+    flex: 1 1 400px;
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Score Explorer Section */
+.explorer-controls {
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+select, button {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    background-color: #fff;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+button {
+    background-color: #1e3a8a;
+    color: #fff;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #1e40af;
+}
+
+/* Modal for score details */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #4b5563;
+}
+
+/* Score Grid Visualization Styles */
+.score-tile {
+    transition: all 0.2s ease;
+    vector-effect: non-scaling-stroke; /* Keep stroke width consistent when scaling */
+    cursor: pointer;
+}
+
+.score-tile:hover {
+    filter: brightness(1.1);
+    stroke: #000;
+    stroke-width: 1.5px;
+}
+
+.score-tile.highlighted {
+    stroke: #ff5722;
+    stroke-width: 2px;
+    animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+    from {
+        stroke-width: 1.5px;
+        filter: brightness(1);
+    }
+    to {
+        stroke-width: 3px;
+        filter: brightness(1.2);
+    }
+}
+
+.viz-title, .viz-subtitle {
+    display: none;
+}
+
+.viz-title {
+    display: none;
+}
+
+.viz-subtitle {
+    display: none;
+}
+
+.row-label, .col-label {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 14px !important;
+}
+
+/* Legend Styles */
+.legend text {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 12px;
+    fill: #333;
+    font-weight: normal;
+}
+
+/* Remove rect styles that are no longer needed and add circle styles */
+.legend circle {
+    vector-effect: non-scaling-stroke; /* Keep stroke width consistent when scaling */
+}
+
+/* Ensure the legend is visible and properly positioned */
+svg .legend {
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 9999 !important;
+}
+
+/* Add styles for the legend container */
+#legend-container {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    margin-top: 10px;
+    display: none; /* Hide the legend container */
+}
+
+/* Update legend item color circle */
+.legend-color {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5rem;
+    border-radius: 50%; /* Make colors appear as circles */
+}
+
+/* Footer Styles */
+footer {
+    background-color: #1e3a8a;
+    color: white;
+    text-align: center;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    height: 5vh; /* Fixed height for footer */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.footer-info {
+    flex: 1 1 300px;
+    margin-bottom: 1.5rem;
+}
+
+.footer-info h3 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.footer-info p {
+    margin-bottom: 0.5rem;
+}
+
+.social-links {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.social-links a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.5rem;
+}
+
+/* Simple flat tooltip style */
+#tooltip {
+    position: absolute;
+    visibility: hidden;
+    opacity: 0;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    pointer-events: none;
+    font-size: 12px;
+    z-index: 9999;
+    max-width: 250px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+    line-height: 1.4;
+    transition: opacity 0.2s ease-in-out;
+}
+
+#tooltip.visible {
+    visibility: visible;
+    opacity: 1;
+}
+
+#tooltip hr {
+    margin: 5px 0;
+    border: none;
+    border-top: 1px solid #ddd;
+}
+
+/* Commented out to fix tooltip functionality */
+/* 
+.tooltip, #persistent-tooltip, .fixed-tooltip-area {
+    display: none !important;
+}
+*/
+
+/* Tennis Scorigami Scrollytelling Styles */
+
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+header {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    max-height: 200px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.25rem;
+}
+
+header h2 {
+    font-size: 1.2rem;
+    font-weight: 300;
+}
+
+main {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    color: #1e3a8a;
+}
+
+h3 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #1e3a8a;
+}
+
+p {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+strong {
+    font-weight: 700;
+}
+
+/* Full Screen Sections */
+.full-screen {
+    height: 90vh; /* Match the height of main */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+/* Intro Section */
+#intro .content {
+    max-width: 800px;
+}
+
+.scroll-indicator {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+.arrow {
+    width: 30px;
+    height: 30px;
+    border-right: 3px solid #1e3a8a;
+    border-bottom: 3px solid #1e3a8a;
+    transform: rotate(45deg);
+    margin: 0 auto 10px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0) rotate(45deg);
+    }
+    40% {
+        transform: translateY(-20px) rotate(45deg);
+    }
+    60% {
+        transform: translateY(-10px) rotate(45deg);
+    }
+}
+
+/* Scrollytelling Sections */
+.scroll-section {
+    position: relative;
+    display: flex;
+    min-height: 100vh;
+}
+
+.sticky-graphic {
+    position: sticky;
+    width: 75%;
+    height: 100vh;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    padding: 20px 0;
+}
+
+.scroll-text {
+    width: 25%;
+    padding: 2rem;
+}
+
+.step {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Visualization Containers */
+#all-scores-viz,
+#scores-2024-viz,
+#historical-viz,
+#rare-scores-viz,
+#popular-scores-viz,
+#explorer-viz {
+    width: 100%;
+    height: 95%;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Explorer Section */
+#explorer {
+    padding: 20px;
+    height: 90vh; /* Same as main */
+    overflow-y: auto;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    justify-content: center;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+}
+
+label {
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+select, input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+}
+
+#explorer-viz {
+    width: 100%;
+    height: 50vh; /* Same height as visualization container */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#score-details {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+#detail-content {
+    margin-top: 1rem;
+}
+
+/* Footer */
+footer {
+    background-color: #1e3a8a;
+    color: white;
+    text-align: center;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    height: 5vh; /* Fixed height for footer */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
+    .scroll-section {
+        flex-direction: column;
+    }
+    
+    .sticky-graphic {
+        position: relative;
+        width: 100%;
+        height: 70vh;
+    }
+    
+    .scroll-text {
+        width: 100%;
+    }
+    
+    .step {
+        min-height: auto;
+        padding: 2rem 0;
+    }
+}
+
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 2.5rem;
+    }
+    
+    header h2 {
+        font-size: 1.2rem;
+    }
+    
+    h2 {
+        font-size: 2rem;
+    }
+    
+    h3 {
+        font-size: 1.5rem;
+    }
+    
+    .control-group {
+        min-width: 100%;
+    }
+    
+    .visualization-container {
+        padding: 1rem !important; /* Reduce padding on mobile */
+    }
+    
+    .title {
+        font-size: 2rem;
+    }
+    
+    .subtitle {
+        font-size: 1.25rem;
+    }
+    
+    .description {
+        font-size: 1rem;
+    }
+    
+    .navigation-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .controls {
+        flex-direction: column;
+    }
+}
+
+/* Visualization Styles */
+.score-label {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 12px !important;
+    text-anchor: middle !important;
+    dominant-baseline: middle !important;
+    pointer-events: none !important;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5rem;
+}
+
+/* Tooltip styles - updated for consistency */
+#tooltip, .tooltip {
+    position: absolute;
+    visibility: hidden;
+    opacity: 0;
+    background-color: white;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 10px;
+    pointer-events: none;
+    font-size: 12px;
+    z-index: 9999;
+    max-width: 250px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+    line-height: 1.4;
+    transition: opacity 0.2s ease-in-out;
+}
+
+#tooltip.visible, .tooltip.visible {
+    visibility: visible;
+    opacity: 1;
+}
+
+#tooltip strong, .tooltip strong {
+    display: block;
+    margin-bottom: 5px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #ddd;
+    color: #1e3a8a;
+    font-size: 14px;
+}
+
+#tooltip hr, .tooltip hr {
+    margin: 5px 0;
+    border: none;
+    border-top: 1px solid #eee;
+}
+
+.tooltip-detail {
+    color: #555;
+    font-style: italic;
+}
+
+/* Active Step Highlighting */
+.step.is-active {
+    background-color: rgba(30, 58, 138, 0.05);
+    border-left: 4px solid #1e3a8a;
+    padding-left: 1rem;
+}
+
+.col-label {
+    display: none;
+}
+
+.col-label-bg {
+    stroke: #eee;
+    stroke-width: 0.5px;
+}
+
+.axis-label {
+    fill: #1e3a8a;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.row-label {
+    fill: #333;
+    font-weight: bold;
+}
+
+/* Improved visualization spacing */
+.viz-title {
+    font-size: 20px;
+    font-weight: bold;
+    fill: #1e3a8a;
+}
+
+.viz-subtitle {
+    font-size: 14px;
+    fill: #555;
+}
+
+/* Highlight styles */
+.highlight-rect {
+    pointer-events: none;
+}
+
+/* Fixed tooltip area */
+.fixed-tooltip-area rect {
+    opacity: 0.95;
+}
+
+.fixed-tooltip-area text {
+    fill: #333;
+}
+
+/* Score Detail Panel */
+#score-detail-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 15px;
+    z-index: 10000;
+    max-width: 300px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    display: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#score-detail-panel h3 {
+    margin-top: 0;
+    color: #1e3a8a;
+    margin-bottom: 10px;
+    padding-right: 20px; /* Space for the close button */
+}
+
+#score-detail-panel div {
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+#score-detail-panel hr {
+    margin: 10px 0;
+    border: none;
+    border-top: 1px solid #eee;
+}
+
+#score-detail-panel .close-button {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Multi-select styles */
+select[multiple] {
+    height: auto;
+    min-width: 150px;
+    overflow-y: auto;
+}
+
+select[multiple] option {
+    padding: 6px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+select[multiple] option:checked {
+    background-color: #e0f0ff;
+    color: #333;
+}
+
+select[multiple] option:hover {
+    background-color: #f0f8ff;
+}
+
+.select-help {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Add these new styles for the narrative-based layout */
+
+/* Hidden class for toggling visibility */
+.hidden {
+    display: none !important;
+}
+
+/* Primary button styles */
+.primary-button {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 30px;
+    background-color: #325BB5; /* Blue background */
+    color: #7EDC44; /* Green text */
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 20px;
+    text-transform: uppercase;
+}
+
+.primary-button:hover {
+    background-color: #264a91; /* Slightly darker blue on hover */
+}
+
+.secondary-button {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 30px;
+    background-color: #4D9F64;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 20px;
+}
+
+.secondary-button:hover {
+    background-color: #3b7c4e;
+}
+
+/* Navigation Controls */
+.navigation-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.nav-button {
+    padding: 10px 20px;
+    background-color: #13472A;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-transform: uppercase;
+    font-size: 30px; /* Consistent size */
+}
+
+.nav-button:first-child {
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 30px;
+    color: #325BB5;
+    font-weight: bold;
+}
+
+.nav-button:last-child {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 30px;
+    color: #325BB5;
+    font-weight: bold;
+}
+
+.nav-button:hover:not([disabled]) {
+    background-color: #0a3821;
+}
+
+.nav-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Narrative visualization section */
+#narrative-visualization {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Full height of main */
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Narrative container (top part) */
+.narrative-container {
+    height: 40vh; /* Fixed height at 40vh */
+    padding: 10px 20px;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #ddd;
+    overflow-y: auto;
+    flex-shrink: 0; /* Prevent from shrinking */
+}
+
+/* Navigation controls */
+.navigation-controls {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 0.5rem;
+}
+
+.nav-button {
+    background-color: rgba(255, 255, 255, 0.3);
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 1rem;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    font-size: 30px; /* Consistent size */
+}
+
+.nav-button:hover:not([disabled]) {
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+}
+
+.nav-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nav-button:first-child {
+    margin-right: auto;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #325BB5;
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.nav-button:last-child {
+    margin-left: auto;
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #325BB5;
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.step-indicator {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Narrative content */
+.narrative-content {
+    position: relative;
+}
+
+.narrative-step {
+    display: none;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.3s ease;
+    /* Use flex to center content vertically */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.narrative-step.active {
+    display: flex;
+    opacity: 1;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Explorer section adjustments */
+#explorer {
+    padding: 20px;
+}
+
+#back-to-narrative {
+    display: block;
+    margin: 20px auto;
+}
+
+/* Make sure axis labels are always visible */
+.axis-label {
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 100 !important;
+    display: block !important;
+    font-family: "GT Planar Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.viz-info {
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 100 !important;
+    display: block !important;
+    font-family: "GT Planar Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+svg {
+    overflow: visible;
+}
+
+/* Clean up the axis label styling */
+.x-axis-title, .y-axis-title, .viz-description {
+    font-family: "GT Planar Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    pointer-events: none;
+}
+
+/* Main visualization container padding adjustments */
+.visualization-container {
+    padding: 2rem 2.5rem !important;
+    background-color: #f9f2e2;
+    width: 100% !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    margin-top: 0 !important;
+    min-height: 300px;
+}
+
+svg {
+    overflow: visible;
+}
+
+/* Add this at the end of the CSS file */
+
+#robust-tooltip {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    max-width: 250px;
+    white-space: nowrap;
+    transition: all 0.1s ease-out;
+}
+
+/* Add styles for the legend container */
+#legend-container {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    margin-top: 10px;
+    display: none; /* Hide the legend container */
+}
+
+/* NEW STYLES FOR TENNIS SCORIGAMI REDESIGN */
+
+/* Reset some base styles */
+.tennis-scorigami {
+    margin: 0;
+    padding: 0;
+    font-family: 'GT Planar Regular', sans-serif;
+    background-color: #325BB5; /* Updated blue color */
+    color: #333;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.site-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 0; /* Remove padding */
+    box-sizing: border-box;
+}
+
+/* Header styles */
+.site-header {
+    background-color: #325BB5; /* Update to requested blue */
+    padding: 8px 0;
+    text-align: center;
+}
+
+.header-text {
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 20px !important; /* Force 20px font size with !important to override conflicts */
+    margin: 0;
+    padding: 0;
+    color: white; /* White text */
+}
+
+.header-text a {
+    color: white;
+    text-decoration: none;
+}
+
+.header-text span {
+    font-family: "GT Planar Italic Light", sans-serif;
+    color: white; /* White text */
+}
+
+/* Main content styles */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.content-container {
+    width: 100%;
+    max-width: 98%; /* Take up almost all of the width */
+    margin: 0 auto; /* Center the content */
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0 2rem; /* Add horizontal padding as suggested */
+}
+
+/* Grid background for narrative header */
+.narrative-header {
+    background-color: #7EDC44; /* Updated green background */
+    padding: 1.5rem 2.5rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom: 0;
+    margin-bottom: 0;
+    background-image: 
+        linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), 
+        linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    height: 25vh;
+    overflow: hidden;
+}
+
+/* Title and text styles */
+.title {
+    font-family: "GT Planar Italic Bold", sans-serif !important;
+    font-size: 60px !important; /* Set to 60px as requested */
+    font-weight: bold !important;
+    margin-bottom: 1rem !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.5px !important;
+    color: #2D4D2E !important;
+    text-transform: uppercase !important;
+}
+
+.subtitle {
+    font-size: 1.25rem;
+    text-align: center;
+    color: #3a4a2b;
+    margin: 0.25rem 0;
+    font-style: italic;
+    font-weight: 300;
+}
+
+.description {
+    font-size: 1.15rem;
+    text-align: center;
+    color: #3a4a2b;
+    max-width: 800px;
+    margin: 0.25rem auto;
+    line-height: 1.3;
+}
+
+/* Navigation controls with more distinct previous/next styling */
+.navigation-controls {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 0.5rem;
+}
+
+/* Previous button */
+.nav-button:first-child {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #325BB5; /* Updated blue color */
+    font-family: "GT Planar Retalic Bold", sans-serif;
+    font-size: 24px; /* More precise font size */
+}
+
+/* Next button */
+.nav-button:last-child {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #325BB5; /* Updated blue color */
+    font-weight: 900;
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 24px; /* More precise font size */
+}
+
+/* Visualization container */
+.visualization-container {
+    background-color: #f9f2e2; /* Cream background */
+    padding: 2rem 2.5rem !important; /* Restore original padding */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    margin: 0 !important; /* Ensure no margin anywhere */
+    min-height: 400px; /* Keep increased minimum height */
+    width: 100% !important; /* Override previous width setting */
+    max-width: none !important; /* Remove any max-width constraints */
+    box-sizing: border-box; /* Include padding in width calculation */
+    position: relative; /* Ensure correct stacking context */
+}
+
+/* Remove the explanatory text at the bottom of the visualization */
+.visualization-container::after {
+    content: ""; /* Empty content to remove the text */
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+}
+
+#main-viz {
+    width: 100% !important;
+    height: 60vh; /* Slightly reduced from 65vh */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: none !important; /* Remove any max-width constraints */
+    position: relative; /* Ensure proper positioning */
+    margin: 0 !important; /* Remove any margin */
+    overflow: visible; /* Allow visualization to exceed container if needed */
+}
+
+#main-viz svg {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Explorer section styles */
+.explorer-content {
+    background-color: #f9f2e2;
+    padding: 2rem;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Intro section fullscreen */
+#intro {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+#intro .narrative-header {
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2.5rem;
+    border-radius: 4px;
+    background-color: #7EDC44; /* Updated green background */
+}
+
+#intro .title {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 60px !important; /* Set to 60px as requested */
+    margin: 0 auto 2rem;
+    text-align: center;
+    line-height: 1.2;
+    color: #2D4D2E;
+    text-transform: uppercase;
+}
+
+/* Remove font-size from TENNIS and SCORIGAMI */
+#intro .title .tennis,
+#intro .title .scorigami {
+    font-family: "GT Planar Retalic Bold", sans-serif;
+    font-size: 50px !important; /* Force larger font size */
+    color: #2D4D2E !important; /* Force updated text color */
+}
+
+/* Specifically update SCORIGAMI to use Italic 30 Bold as requested */
+#intro .title .scorigami {
+    font-family: "GT Planar Italic Bold", sans-serif !important;
+}
+
+#intro .subtitle {
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 34px;
+    margin: 0 0 1rem 0;
+    letter-spacing: 1px;
+    color: #2D4D2E; /* Updated text color */
+}
+
+#intro .description {
+    margin: 0 0 2rem 0;
+    font-size: 30px;
+    color: #2D4D2E; /* Updated text color */
+}
+
+/* Styles for the title's specific parts */
+.title .tennis,
+.title .scorigami {
+    color: #2D4D2E !important;
+    /* font-size removed as requested */
+}
+
+/* Styles for the description's specific parts */
+.description .sliced-data {
+    font-family: "GT Planar Retalic Light", sans-serif;
+    color: #2D4D2E; /* Updated text color */
+}
+
+.description .project {
+    font-family: "GT Planar Italic Light", sans-serif;
+    color: #2D4D2E; /* Updated text color */
+}
+
+/* Primary button styles for intro screen */
+#intro .primary-button {
+    background-color: #325BB5; /* Blue background */
+    color: #7EDC44; /* Green text */
+    border: none;
+    border-radius: 4px;
+    padding: 0.75rem 2rem;
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 30px;
+    cursor: pointer;
+    margin-top: 3rem;
+    transition: all 0.2s ease;
+}
+
+#intro .primary-button:hover {
+    background-color: #264a91; /* Slightly darker blue on hover */
+    transform: scale(1.05);
+}
+
+/* Navigation controls with more distinct previous/next styling */
+.navigation-controls {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 0.5rem;
+}
+
+/* Previous button */
+.nav-button:first-child {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #325BB5; /* Updated blue color */
+    font-family: "GT Planar Retalic Bold", sans-serif;
+    font-size: 24px; /* More precise font size */
+}
+
+/* Next button */
+.nav-button:last-child {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #325BB5; /* Updated blue color */
+    font-weight: 900;
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 24px; /* More precise font size */
+}
+
+/* Ensure the visualization fits well */
+/* Remove this duplicate rule as it's already defined above
+.visualization-container {
+    min-height: 300px;
+}
+*/
+
+/* Narrative steps */
+.narrative-step {
+    display: none;
+}
+
+.narrative-step.active {
+    display: block;
+}
+
+/* Fix tooltips */
+#tooltip {
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 9999;
+    max-width: 250px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .title {
+        font-size: 2rem;
+    }
+    
+    .subtitle {
+        font-size: 1.25rem;
+    }
+    
+    .description {
+        font-size: 1rem;
+    }
+    
+    .navigation-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .controls {
+        flex-direction: column;
+    }
+}
+
+/* Override any conflicting styles to ensure consistent padding */
+#narrative-visualization .narrative-header {
+    padding: 1.5rem 2.5rem !important;
+}
+
+#narrative-visualization .visualization-container {
+    padding: 2rem 2.5rem !important; /* Restore original padding */
+    width: 100% !important;
+    background-color: #f9f2e2;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    /* Ensure full width display */
+    max-width: none !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    margin: 0 !important;
+    min-height: 450px; /* Keep increased minimum height */
+}
+
+/* Responsive adjustment for narrative visualization */
+@media (max-width: 768px) {
+    #narrative-visualization .visualization-container {
+        padding: 1rem !important;
+    }
+}
+
+/* Ensure nav buttons are properly spaced and don't have duplicate margin settings */
+.nav-button:first-child {
+    margin-right: 0.5rem; /* Smaller right margin */
+}
+
+.nav-button:last-child {
+    margin-left: 0.5rem; /* Smaller left margin */
+}
+
+/* Header Styles - "Subscribe to" in Retalic Light 30, "Sliced Data" in Italic Light 30 */
+.header-text {
+    font-size: 30px;
+}
+
+.header-text {
+    font-family: "GT Planar Retalic Light", sans-serif;
+}
+
+.header-text span {
+    font-family: "GT Planar Italic Light", sans-serif;
+}
+
+/* Title Styles - Intro page*/
+#intro .title {
+    font-size: 30px;
+}
+
+#intro .subtitle {
+    font-family: "GT Planar Retalic Light", sans-serif;
+    font-size: 30px;
+}
+
+/* TENNIS SCORIGAMI title style - overriding conflicting styles */
+#intro .title .tennis,
+#intro .title .scorigami {
+    font-family: "GT Planar Retalic Bold", sans-serif;
+    font-size: 50px !important; /* Force larger font size */
+    color: #2D4D2E !important; /* Force updated text color */
+}
+
+/* "A Sliced Data Project" style */
+#intro .description {
+    font-size: 30px;
+}
+
+#intro .description .sliced-data {
+    font-family: "GT Planar Retalic Light", sans-serif;
+}
+
+#intro .description .project {
+    font-family: "GT Planar Italic Light", sans-serif;
+}
+
+/* Button Styles */
+.primary-button, .secondary-button {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 30px;
+}
+
+/* Narrative Step Title Styles */
+.narrative-step .title {
+    font-family: "GT Planar Italic Bold", sans-serif !important;
+    font-size: 30px !important; /* 30px as originally requested */
+    font-weight: bold !important;
+    margin-bottom: 1rem !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.5px !important;
+    color: #2D4D2E !important; /* Dark green color */
+    text-transform: uppercase !important;
+    text-align: center !important;
+}
+
+.narrative-step .description {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 18px !important;
+    line-height: 1.5 !important;
+    color: #2D4D2E !important;
+    max-width: 800px !important;
+    margin: 0 auto 1rem auto !important;
+    text-align: center !important;
+}
+
+/* Center the explorer button */
+#go-to-explorer {
+    display: block !important;
+    margin: 30px auto !important;
+}
+
+/* Navigation button styles */
+.nav-button:first-child {
+    font-family: "GT Planar Retalic Bold", sans-serif !important;
+    font-size: 30px !important;
+    color: #325BB5 !important;
+    font-weight: bold !important;
+    margin-right: auto;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.nav-button:last-child {
+    font-family: "GT Planar Italic Bold", sans-serif !important;
+    font-size: 30px !important;
+    color: #325BB5 !important;
+    font-weight: bold !important;
+    margin-left: auto;
+    background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Explorer Controls */
+.controls label {
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 16px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.controls select, 
+.controls option {
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 14px;
+}
+
+.select-help {
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+#score-details h3 {
+    font-family: "GT Planar Italic Bold", sans-serif;
+    font-size: 20px;
+}
+
+#score-details p {
+    font-family: "GT Planar Regular", sans-serif;
+}
+
+/* Update visualization axis labels to use GT Planar Regular */
+.row-label, .col-label {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 14px !important;
+}
+
+/* Axis and Visualization Label Styles */
+.x-axis-title, 
+.y-axis-title, 
+.viz-description {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 14px !important;
+    pointer-events: none !important;
+}
+
+.axis-label {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 14px !important;
+    fill: #2D4D2E !important;
+    font-weight: normal !important;
+}
+
+.row-label {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 14px !important;
+    fill: #2D4D2E !important;
+    font-weight: normal !important;
+}
+
+.col-label {
+    font-family: "GT Planar Regular", sans-serif !important;
+    font-size: 14px !important;
+    fill: #2D4D2E !important;
+    font-weight: normal !important;
+}
+
+/* Styling for rare scorelines list */
+.rare-scorelines {
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 10px;
+    font-family: "GT Planar Regular", sans-serif;
+    font-size: 14px;
+}
+
+.rare-scorelines li {
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+}
+
+.rare-scorelines li:nth-child(odd) {
+    background-color: rgba(255, 255, 255, 0.2);
+} 

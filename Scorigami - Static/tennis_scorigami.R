@@ -1,0 +1,687 @@
+# Fixed Interactive Tennis Scorigami with Proper Legend
+# Creates an interactive D3.js visualization with SVG export option
+
+# Load required packages
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(htmlwidgets)
+
+# Create output directory if it doesn't exist
+dir.create("Output", showWarnings = FALSE)
+
+# Load and process the ATP match data
+atp_data <- read.csv("atp_matches_2024.csv", stringsAsFactors = FALSE)
+
+# Function to parse tennis score (keeping exact scoreline format)
+parse_score <- function(score_string) {
+  if (is.na(score_string)) return(NA)
+  
+  # Skip retirements, walkovers, etc.
+  if (grepl("RET|W/O|DEF|ABD|UNFINISHED", score_string, ignore.case = TRUE)) {
+    return(NA)
+  }
+  
+  # Extract sets (remove tiebreak details)
+  sets <- c()
+  for (part in str_split(score_string, " ")[[1]]) {
+    # Handle sets with tiebreak info like "7-6(5)"
+    if (grepl("\\(", part)) {
+      set_score <- sub("(\\d+-\\d+)\\(.*\\)", "\\1", part)
+      sets <- c(sets, set_score)
+    } 
+    # Handle normal set scores like "6-4"
+    else if (grepl("^\\d+-\\d+$", part)) {
+      sets <- c(sets, part)  # Use 'part' directly for normal scores
+    }
+  }
+  
+  if (length(sets) == 0) return(NA)
+  return(paste(sets, collapse = " "))
+}
+
+# Parse all scores
+atp_data$parsed_score <- sapply(atp_data$score, parse_score)
+
+# Filter for valid BO3 matches
+is_valid_bo3 <- function(score) {
+  if (is.na(score)) return(FALSE)
+  
+  sets <- str_split(score, " ")[[1]]
+  if (length(sets) < 2 || length(sets) > 3) return(FALSE)
+  
+  winner_sets <- 0
+  for (set in sets) {
+    parts <- as.numeric(strsplit(set, "-")[[1]])
+    if (parts[1] > parts[2]) winner_sets <- winner_sets + 1
+  }
+  
+  return(winner_sets == 2) # Valid BO3 match if winner has exactly 2 sets
+}
+
+atp_data <- atp_data[!is.na(atp_data$parsed_score), ]
+atp_data$is_bo3 <- sapply(atp_data$parsed_score, is_valid_bo3)
+bo3_matches <- atp_data[atp_data$is_bo3, ]
+
+# Count occurrences of each scoreline
+observed_scores <- table(bo3_matches$parsed_score)
+observed_df <- data.frame(
+  scoreline = names(observed_scores),
+  count = as.numeric(observed_scores)
+)
+
+# Generate all possible scorelines
+generate_all_scorelines <- function() {
+  # Set score possibilities
+  winning_sets <- c("6-0", "6-1", "6-2", "6-3", "6-4", "7-5", "7-6")
+  losing_sets <- c("0-6", "1-6", "2-6", "3-6", "4-6", "5-7", "6-7")
+  
+  # Straight sets (2-0)
+  straight_sets <- expand.grid(
+    set1 = winning_sets,
+    set2 = winning_sets,
+    stringsAsFactors = FALSE
+  )
+  straight_sets$scoreline <- paste(straight_sets$set1, straight_sets$set2)
+  straight_sets$first_set <- straight_sets$set1
+  
+  # 3-set matches with first set lost (1-2)
+  three_sets_1 <- expand.grid(
+    set1 = losing_sets,
+    set2 = winning_sets,
+    set3 = winning_sets,
+    stringsAsFactors = FALSE
+  )
+  three_sets_1$scoreline <- paste(three_sets_1$set1, three_sets_1$set2, three_sets_1$set3)
+  three_sets_1$first_set <- three_sets_1$set1
+  
+  # 3-set matches with second set lost (2-1)
+  three_sets_2 <- expand.grid(
+    set1 = winning_sets,
+    set2 = losing_sets,
+    set3 = winning_sets,
+    stringsAsFactors = FALSE
+  )
+  three_sets_2$scoreline <- paste(three_sets_2$set1, three_sets_2$set2, three_sets_2$set3)
+  three_sets_2$first_set <- three_sets_2$set1
+  
+  # Combine all possible scorelines
+  all_scorelines <- rbind(
+    straight_sets[, c("scoreline", "first_set")],
+    three_sets_1[, c("scoreline", "first_set")],
+    three_sets_2[, c("scoreline", "first_set")]
+  )
+  
+  # Add set count
+  all_scorelines$num_sets <- sapply(all_scorelines$scoreline, function(x) {
+    length(str_split(x, " ")[[1]])
+  })
+  
+  # Add observed flag
+  all_scorelines$observed <- all_scorelines$scoreline %in% observed_df$scoreline
+  
+  # Add count for observed scores
+  all_scorelines$count <- 0
+  for (i in 1:nrow(observed_df)) {
+    idx <- which(all_scorelines$scoreline == observed_df$scoreline[i])
+    if (length(idx) > 0) {
+      all_scorelines$count[idx] <- observed_df$count[i]
+    }
+  }
+  
+  # Add individual set scores
+  all_scorelines <- all_scorelines %>%
+    mutate(
+      set1_score = sapply(scoreline, function(x) {
+        parts <- str_split(x, " ")[[1]]
+        return(parts[1])
+      }),
+      set2_score = sapply(scoreline, function(x) {
+        parts <- str_split(x, " ")[[1]]
+        if (length(parts) >= 2) return(parts[2]) else return(NA)
+      }),
+      set3_score = sapply(scoreline, function(x) {
+        parts <- str_split(x, " ")[[1]]
+        if (length(parts) >= 3) return(parts[3]) else return(NA)
+      })
+    )
+  
+  return(all_scorelines)
+}
+
+# Generate all possible scorelines
+all_scorelines_df <- generate_all_scorelines()
+
+# Define order for first set results
+winning_set_order <- c("7-6", "7-5", "6-4", "6-3", "6-2", "6-1", "6-0")
+losing_set_order <- c("6-7", "5-7", "4-6", "3-6", "2-6", "1-6", "0-6")
+
+# Combine the sets in the desired order (7-6 at top, 6-0 at bottom)
+first_set_order <- c(winning_set_order, losing_set_order)
+
+# Create a factor for first set with the correct order
+all_scorelines_df$first_set_ordered <- factor(
+  all_scorelines_df$first_set,
+  levels = rev(first_set_order)  # Reverse because ggplot starts from bottom
+)
+
+# Order the data by first set and rest of score
+all_scorelines_df <- all_scorelines_df %>%
+  arrange(first_set_ordered, set2_score, set3_score)
+
+# Add position for grid layout
+all_scorelines_df <- all_scorelines_df %>%
+  group_by(first_set) %>%
+  mutate(
+    x_pos = row_number()
+  ) %>%
+  ungroup()
+
+# Calculate statistics
+total_possible <- nrow(all_scorelines_df)
+total_observed <- sum(all_scorelines_df$observed)
+fill_percentage <- (total_observed / total_possible) * 100
+
+# Define the exact four colors
+exact_colors <- c(
+  "#FBFAA7", # Pale yellow
+  "#A2F359", # Lime green
+  "#4D9F64", # Medium green
+  "#13472A"  # Dark green
+)
+
+# Assign color based on count
+all_scorelines_df$color_bin <- cut(
+  all_scorelines_df$count, 
+  breaks = c(-Inf, 0, 5, 25, 75, Inf), 
+  labels = c("not_observed", "rare", "uncommon", "common", "very_common")
+)
+
+# Assign color code
+all_scorelines_df$color <- "#f0f0f0"  # Default (not observed)
+all_scorelines_df$color[all_scorelines_df$color_bin == "rare"] <- exact_colors[1]
+all_scorelines_df$color[all_scorelines_df$color_bin == "uncommon"] <- exact_colors[2]
+all_scorelines_df$color[all_scorelines_df$color_bin == "common"] <- exact_colors[3]
+all_scorelines_df$color[all_scorelines_df$color_bin == "very_common"] <- exact_colors[4]
+
+# Create data for each row (first set)
+rows_data <- data.frame(
+  first_set = first_set_order,
+  row_index = 1:length(first_set_order)
+)
+
+# Prepare JSON data for D3.js
+# First, create a list of rows with their scorelines
+json_data <- list()
+json_data$statistics <- list(
+  total_possible = total_possible,
+  total_observed = total_observed,
+  fill_percentage = round(fill_percentage, 1)
+)
+
+json_data$color_scale <- list(
+  not_observed = "#f0f0f0",
+  rare = exact_colors[1],
+  uncommon = exact_colors[2],
+  common = exact_colors[3],
+  very_common = exact_colors[4]
+)
+
+json_data$frequency_breaks <- list(
+  rare = "1-5",
+  uncommon = "6-25",
+  common = "26-75",
+  very_common = "76+"
+)
+
+json_data$first_sets <- first_set_order
+
+# Convert the scorelines data to a list format
+json_data$scorelines <- list()
+
+for (row_idx in 1:length(first_set_order)) {
+  first_set <- first_set_order[row_idx]
+  row_scorelines <- all_scorelines_df[all_scorelines_df$first_set == first_set, ]
+  
+  scorelines_list <- list()
+  for (i in 1:nrow(row_scorelines)) {
+    scoreline_data <- list(
+      scoreline = row_scorelines$scoreline[i],
+      set1 = row_scorelines$set1_score[i],
+      set2 = row_scorelines$set2_score[i],
+      set3 = ifelse(is.na(row_scorelines$set3_score[i]), "", row_scorelines$set3_score[i]),
+      count = row_scorelines$count[i],
+      color = row_scorelines$color[i],
+      color_bin = as.character(row_scorelines$color_bin[i]),
+      position = row_scorelines$x_pos[i]
+    )
+    scorelines_list[[i]] <- scoreline_data
+  }
+  
+  json_data$scorelines[[first_set]] <- scorelines_list
+}
+
+# Convert to JSON
+json_string <- toJSON(json_data, auto_unbox = TRUE, pretty = TRUE)
+
+# Create the HTML file with D3.js
+html_content <- '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Tennis Scorigami</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        
+        #chart-container {
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .scoreline-box {
+            stroke: white;
+            stroke-width: 1px;
+            transition: transform 0.1s ease;
+        }
+        
+        .scoreline-box:hover {
+            transform: scale(1.1);
+            stroke: #333;
+            stroke-width: 2px;
+            z-index: 1000;
+        }
+        
+        .score-text {
+            text-anchor: middle;
+            dominant-baseline: middle;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        
+        .row-label {
+            text-anchor: end;
+            dominant-baseline: middle;
+            font-weight: bold;
+        }
+        
+        .title-text {
+            text-anchor: middle;
+            font-weight: bold;
+        }
+        
+        .subtitle-text {
+            text-anchor: middle;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            pointer-events: none;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 200px;
+        }
+        
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        #controls {
+            margin: 20px auto;
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            background-color: #4D9F64;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #3c7d4f;
+        }
+        
+        .filter-buttons {
+            margin: 10px 0;
+        }
+        
+        .filter-buttons button {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .filter-buttons button.active {
+            background-color: #13472A;
+            color: white;
+        }
+        
+        .export-buttons {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h2>Tennis Scorigami - 2024 ATP Tour</h2>
+        <div class="filter-buttons">
+            <button id="all-button" class="active">All Scores</button>
+            <button id="observed-button">Observed Scores</button>
+            <button id="not-observed-button">Not Observed</button>
+        </div>
+        <div>
+            <button id="straight-sets-button">Straight Sets Only</button>
+            <button id="three-sets-button">Three Sets Only</button>
+            <button id="reset-button">Reset View</button>
+        </div>
+        <div class="export-buttons">
+            <button id="export-svg">Export as SVG</button>
+        </div>
+    </div>
+    
+    <div id="chart-container"></div>
+    <div id="legend"></div>
+
+    <script>
+        // Load the data
+        const jsonData = JSONDATA_PLACEHOLDER;
+        
+        // Configuration
+        const config = {
+            boxSize: 60,
+            spacing: 5,
+            rowHeight: 70,
+            labelWidth: 50,
+            topMargin: 50,
+            leftMargin: 60
+        };
+        
+        // Calculate dimensions
+        const maxBoxesPerRow = Math.max(...Object.values(jsonData.scorelines).map(row => row.length));
+        const width = config.leftMargin + maxBoxesPerRow * (config.boxSize + config.spacing);
+        const height = config.topMargin + jsonData.first_sets.length * config.rowHeight;
+        
+        // Create SVG
+        const svg = d3.select("#chart-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+        
+        // Add title and subtitle
+        svg.append("text")
+            .attr("class", "title-text")
+            .attr("x", width / 2)
+            .attr("y", 20)
+            .style("font-size", "18px")
+            .text("Tennis Scorigami - 2024 ATP Tour");
+            
+        svg.append("text")
+            .attr("class", "subtitle-text")
+            .attr("x", width / 2)
+            .attr("y", 40)
+            .style("font-size", "14px")
+            .text(`${jsonData.statistics.total_observed} of ${jsonData.statistics.total_possible} possible scorelines observed (${jsonData.statistics.fill_percentage}%)`);
+        
+        // Create tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+        
+        // Add row labels (first set scores)
+        svg.selectAll(".row-label")
+            .data(jsonData.first_sets)
+            .enter()
+            .append("text")
+            .attr("class", "row-label")
+            .attr("x", config.leftMargin - 10)
+            .attr("y", (d, i) => config.topMargin + i * config.rowHeight + config.rowHeight / 2)
+            .text(d => d);
+        
+        // Draw boxes for each scoreline
+        jsonData.first_sets.forEach((firstSet, rowIndex) => {
+            const scorelineData = jsonData.scorelines[firstSet];
+            
+            // Create a group for each row
+            const rowGroup = svg.append("g")
+                .attr("class", "row")
+                .attr("data-first-set", firstSet);
+            
+            // Add scoreline boxes
+            scorelineData.forEach((scoreline, boxIndex) => {
+                const x = config.leftMargin + boxIndex * (config.boxSize + config.spacing);
+                const y = config.topMargin + rowIndex * config.rowHeight;
+                
+                // Add box
+                const box = rowGroup.append("rect")
+                    .attr("class", "scoreline-box")
+                    .attr("data-count", scoreline.count)
+                    .attr("data-scoreline", scoreline.scoreline)
+                    .attr("data-color-bin", scoreline.color_bin)
+                    .attr("data-sets", scoreline.set3 ? "three" : "two")
+                    .attr("x", x)
+                    .attr("y", y)
+                    .attr("width", config.boxSize)
+                    .attr("height", config.boxSize)
+                    .attr("fill", scoreline.color)
+                    .attr("rx", 3)  // Rounded corners
+                    .on("mouseover", function(event) {
+                        // Highlight the box
+                        d3.select(this)
+                            .attr("stroke", "#333")
+                            .attr("stroke-width", 2);
+                        
+                        // Show tooltip
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", 1);
+                        
+                        let tooltipContent = `
+                            <div><strong>Scoreline:</strong> ${scoreline.scoreline}</div>
+                            <div><strong>Frequency:</strong> ${scoreline.count} ${scoreline.count === 1 ? "match" : "matches"}</div>
+                        `;
+                        
+                        tooltip.html(tooltipContent)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        // Restore box appearance
+                        d3.select(this)
+                            .attr("stroke", "white")
+                            .attr("stroke-width", 1);
+                        
+                        // Hide tooltip
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+                
+                // Text color based on background brightness
+                const textColor = (scoreline.color_bin === "common" || scoreline.color_bin === "very_common") ? "white" : "black";
+                
+                // Add set scores as separate lines
+                // Set 1
+                rowGroup.append("text")
+                    .attr("class", "score-text")
+                    .attr("x", x + config.boxSize / 2)
+                    .attr("y", y + config.boxSize / 3 - 2)
+                    .attr("fill", textColor)
+                    .style("font-size", "12px")
+                    .text(scoreline.set1);
+                
+                // Set 2
+                rowGroup.append("text")
+                    .attr("class", "score-text")
+                    .attr("x", x + config.boxSize / 2)
+                    .attr("y", y + config.boxSize / 2)
+                    .attr("fill", textColor)
+                    .style("font-size", "12px")
+                    .text(scoreline.set2);
+                
+                // Set 3 (if exists)
+                if (scoreline.set3) {
+                    rowGroup.append("text")
+                        .attr("class", "score-text")
+                        .attr("x", x + config.boxSize / 2)
+                        .attr("y", y + config.boxSize * 2/3 + 2)
+                        .attr("fill", textColor)
+                        .style("font-size", "12px")
+                        .text(scoreline.set3);
+                }
+            });
+        });
+        
+        // Add caption at the bottom
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height - 5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "12px")
+            .text("Rows organized by first set result (7-6 at top to 0-6 at bottom)");
+        
+        // Add legend to the separate div (bottom right)
+        const legend = d3.select("#legend");
+        
+        legend.append("div")
+            .attr("class", "legend-title")
+            .text("Frequency");
+        
+        // Legend items
+        const legendItems = [
+            { label: jsonData.frequency_breaks.very_common, color: jsonData.color_scale.very_common },
+            { label: jsonData.frequency_breaks.common, color: jsonData.color_scale.common },
+            { label: jsonData.frequency_breaks.uncommon, color: jsonData.color_scale.uncommon },
+            { label: jsonData.frequency_breaks.rare, color: jsonData.color_scale.rare },
+            { label: "Not observed", color: jsonData.color_scale.not_observed }
+        ];
+        
+        legendItems.forEach(item => {
+            const legendItem = legend.append("div")
+                .attr("class", "legend-item");
+            
+            legendItem.append("div")
+                .attr("class", "legend-color")
+                .style("background-color", item.color);
+            
+            legendItem.append("div")
+                .text(item.label);
+        });
+        
+        // Add controls functionality
+        d3.select("#all-button").on("click", function() {
+            d3.selectAll(".filter-buttons button").classed("active", false);
+            d3.select(this).classed("active", true);
+            d3.selectAll(".scoreline-box").style("display", "block");
+        });
+        
+        d3.select("#observed-button").on("click", function() {
+            d3.selectAll(".filter-buttons button").classed("active", false);
+            d3.select(this).classed("active", true);
+            d3.selectAll(".scoreline-box").style("display", function() {
+                return d3.select(this).attr("data-color-bin") === "not_observed" ? "none" : "block";
+            });
+        });
+        
+        d3.select("#not-observed-button").on("click", function() {
+            d3.selectAll(".filter-buttons button").classed("active", false);
+            d3.select(this).classed("active", true);
+            d3.selectAll(".scoreline-box").style("display", function() {
+                return d3.select(this).attr("data-color-bin") === "not_observed" ? "block" : "none";
+            });
+        });
+        
+        d3.select("#straight-sets-button").on("click", function() {
+            d3.selectAll(".scoreline-box").style("display", function() {
+                const isDisplayed = d3.select(this).style("display") !== "none";
+                const isStraightSets = d3.select(this).attr("data-sets") === "two";
+                return isDisplayed && isStraightSets ? "block" : "none";
+            });
+        });
+        
+        d3.select("#three-sets-button").on("click", function() {
+            d3.selectAll(".scoreline-box").style("display", function() {
+                const isDisplayed = d3.select(this).style("display") !== "none";
+                const isThreeSets = d3.select(this).attr("data-sets") === "three";
+                return isDisplayed && isThreeSets ? "block" : "none";
+            });
+        });
+        
+        d3.select("#reset-button").on("click", function() {
+            d3.select("#all-button").dispatch("click");
+        });
+        
+        // Export SVG functionality
+        d3.select("#export-svg").on("click", function() {
+            // Get the SVG element and its dimensions
+            const svgElement = document.querySelector("svg");
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgElement);
+            
+            // Create a Blob with the SVG content
+            const blob = new Blob([svgString], {type: "image/svg+xml"});
+            
+            // Create a link element and trigger download
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "tennis_scorigami.svg";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    </script>
+</body>
+</html>'
+
+# Replace the placeholder with actual JSON data
+html_content <- gsub("JSONDATA_PLACEHOLDER", json_string, html_content)
+
+# Write the HTML file
+writeLines(html_content, "Output/tennis_scorigami_interactive.html")
+
+# Print summary
+cat("\n===== INTERACTIVE TENNIS SCORIGAMI =====\n")
+cat(sprintf("Total possible scorelines: %d\n", total_possible))
+cat(sprintf("Observed scorelines: %d\n", total_observed))
+cat(sprintf("Fill percentage: %.1f%%\n", fill_percentage))
+cat("\nInteractive visualization saved to: Output/tennis_scorigami_interactive.html\n")
+cat("Legend is now properly positioned in the bottom right corner.\n")
+cat("SVG export functionality has been fixed.\n")

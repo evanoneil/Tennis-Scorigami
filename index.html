@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Scorigami - A Visual Journey</title>
+    <script>
+    // Force a hard refresh to clear cache
+    if (performance.navigation.type === 1) {
+        // This is a page reload
+        const timestamp = new Date().getTime();
+        const scripts = document.querySelectorAll('script[src*=".js"]');
+        scripts.forEach(script => {
+            if (script.src.includes('?v=')) {
+                script.src = script.src.split('?v=')[0] + '?v=' + timestamp;
+            } else if (script.src.includes('.js')) {
+                script.src = script.src + '?v=' + timestamp;
+            }
+        });
+        console.log('Forced cache refresh of JS files');
+    }
+    </script>
+    <link rel="stylesheet" href="css/styles.css?v=20250425">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body class="tennis-scorigami">
+    <!-- Force refresh button removed for production -->
+
+    <div class="site-container">
+        <!-- Header -->
+        <header class="site-header">
+            <h2 class="header-text"><a href="https://sliceddata.substack.com/" target="_blank">Subscribe to <span>Sliced Data</span></a></h2>
+        </header>
+
+        <!-- Main content -->
+        <main class="main-content">
+            <!-- Start Screen -->
+            <section id="intro" class="full-screen">
+                <div class="content-container">
+                    <div class="narrative-header">
+                        <p class="subtitle">Every tennis scoreline ever</p>
+                        <h1 class="title"><span class="tennis">TENNIS</span> <span class="scorigami">SCORIGAMI</span></h1>
+                        <p class="description"><span class="sliced-data">A Sliced Data</span> <span class="project">Project</span></p>
+                        <button id="start-exploring" class="primary-button">Click to begin</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Narrative Section -->
+            <section id="narrative-visualization" class="hidden">
+                <div class="content-container">
+                    <!-- Green header with grid -->
+                    <div class="narrative-header">
+                        <div class="narrative-step active" data-step="all-scores">
+                            <h1 class="title">ALL POSSIBLE SCORES</h1>
+                            <p class="description">In a best-of-three tennis match, with tiebreakers, there are <strong>735</strong> possible scorelines. Each circle represents a unique possible final score in a tennis match.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="straight-sets">
+                            <h1 class="title">STRAIGHT SETS VICTORIES</h1>
+                            <p class="description">49 of these scores represent straight sets victories, where the winner takes both sets without losing one.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="three-sets">
+                            <h1 class="title">THREE-SET MATCHES</h1>
+                            <p class="description">The remaining 686 scores represent three-set matches, where the winner loses one set but wins the other two.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="atp-2024">
+                            <h1 class="title">ATP SCORES IN 2024</h1>
+                            <p class="description">The ATP tour has recorded matches with <span id="atp-2024-count"></span> different scorelines out of a total of <span id="total-atp-2024-matches"></span> matches in 2024.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="wta-2024">
+                            <h1 class="title">WTA SCORES IN 2024</h1>
+                            <p class="description">The WTA tour has recorded matches with <span id="wta-2024-count"></span> different scorelines out of a total of <span id="total-wta-2024-matches"></span> matches in 2024.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="combined-2024">
+                            <h1 class="title">COMBINED SCORES IN 2024</h1>
+                            <p class="description">Together, the ATP and WTA tours have recorded <span id="combined-2024-count"></span> different scorelines in 2024. That's <span id="combined-2024-percentage">71</span>% of all possible scores!</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="since-1968">
+                            <h1 class="title">SCORES SINCE 1968</h1>
+                            <p class="description">Going back to the beginning of the Open Era in 1968, <span id="historical-count"></span> different scorelines have been recorded in the WTA and ATP.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="never-seen">
+                            <h1 class="title">SCORES NEVER SEEN</h1>
+                            <p class="description"><span id="never-seen-count"></span> possible scorelines have never been recorded in professional tennis.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="rarest-2024">
+                            <h1 class="title">RAREST SCORES IN 2024</h1>
+                            <p class="description">Some scorelines have occurred only once in 2024.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="rarest-all-time">
+                            <h1 class="title">RAREST SCORES OF ALL TIME</h1>
+                            <p class="description">Two scorelines have occurred only once since 1968:</p>
+                            <ul class="rare-scorelines">
+                                <li>0-6 6-0 7-6: Gilles Simon def. Gael Monfils (ATP, 2017 Madrid Masters, Clay)</li>
+                                <li>0-6 7-6 6-0: Barbora Strycova def. Elena Rybakina (WTA, 2019 Istanbul, Clay)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="popular-2024">
+                            <h1 class="title">MOST POPULAR SCORES IN 2024</h1>
+                            <p class="description">The most common scoreline in 2024 is <span id="popular-2024"></span>, occurring <span id="popular-2024-count"></span> times.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="popular-all-time">
+                            <h1 class="title">MOST POPULAR SCORES OF ALL TIME</h1>
+                            <p class="description">The most common scoreline of all time is <span id="popular-all-time"></span>, occurring <span id="popular-all-time-count"></span> times since 1968.</p>
+                        </div>
+                        
+                        <div class="narrative-step" data-step="explorer-intro">
+                            <h1 class="title">TENNIS SCORIGAMI EXPLORER</h1>
+                            <p class="description">Explore the full Tennis Scorigami dataset in detail on our dedicated explorer page.</p>
+                            <button id="go-to-explorer" class="primary-button">Open Explorer</button>
+                        </div>
+
+                        <!-- Navigation buttons -->
+                        <div class="navigation-controls">
+                            <button id="prev-step" class="nav-button" disabled>PREVIOUS</button>
+                            <button id="next-step" class="nav-button">NEXT</button>
+                        </div>
+                    </div>
+
+                    <!-- Visualization container -->
+                    <div class="visualization-container">
+                        <div id="legend-container"></div>
+                        <div id="main-viz"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Explorer Section -->
+            <section id="explorer" class="hidden">
+                <div class="content-container">
+                    <div class="narrative-header">
+                        <h1 class="title">TENNIS SCORIGAMI EXPLORER</h1>
+                        <p class="description">Filter the data to explore different scorelines</p>
+                    </div>
+                    
+                    <div class="explorer-content">
+                        <div class="controls">
+                            <div class="control-group">
+                                <label for="tour-select">Tour:</label>
+                                <select id="tour-select" multiple size="3">
+                                    <option value="all" selected>All Tours</option>
+                                    <option value="atp">ATP (Men's)</option>
+                                    <option value="wta">WTA (Women's)</option>
+                                </select>
+                                <div class="select-help">Hold Ctrl/Cmd to select multiple</div>
+                            </div>
+                            <div class="control-group">
+                                <label for="year-select">Year:</label>
+                                <select id="year-select" multiple size="5">
+                                    <option value="all" selected>All Years</option>
+                                    <!-- Years will be populated by JavaScript -->
+                                </select>
+                                <div class="select-help">Hold Ctrl/Cmd to select multiple</div>
+                            </div>
+                        </div>
+                        
+                        <div id="explorer-viz"></div>
+                        
+                        <div id="score-details">
+                            <h3>Score Details</h3>
+                            <p>Click on a score to see details</p>
+                            <div id="detail-content"></div>
+                        </div>
+                        
+                        <button id="back-to-narrative" class="secondary-button">Back to Narrative</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Load D3.js and our custom scripts -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="js/scorigami.js?v=20250425"></script>
+    <script src="js/narrative.js?v=20250425"></script>
+</body>
+</html> 
